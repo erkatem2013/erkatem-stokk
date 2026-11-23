@@ -209,7 +209,7 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 <script>
 const SUPABASE_URL="https://ffcrxcllhzkcnjnidbdd.supabase.co";
 const SUPABASE_KEY="sb_publishable_6z5xgxYkLnVUEohzc_nlHA_yXDkMcfU";
-const EMAIL_DOMAIN="erkatem-stok.app";
+const EMAIL_DOMAIN="erkatem.com";
 
 const $=id=>document.getElementById(id);
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
@@ -232,6 +232,7 @@ const errTr=m=>{m=m||"";
   if(/Database error saving new user/i.test(m))return "Bu kullanıcı adı alınmış";
   if(/Email not confirmed/i.test(m))return "Hesap onaylı değil (Supabase'te 'Confirm email' kapatılmalı)";
   if(/Failed to fetch|NetworkError/i.test(m))return "İnternet bağlantısı yok";
+  if(/Email address .* is invalid/i.test(m))return "Kullanıcı adı kabul edilmedi, başka bir ad dene";
   return m};
 const userToEmail=u=>u+"@"+EMAIL_DOMAIN;
 const cleanUser=u=>norm(u).replace(/[^a-z0-9._-]/g,"");
