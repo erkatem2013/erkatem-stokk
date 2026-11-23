@@ -237,6 +237,7 @@ html,body{overscroll-behavior-y:none}
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div>
   <button class="btn pri hide" id="priceBtn" style="margin-top:14px">💰 Hızlı fiyat girişi</button>
+  <button class="btn pri hide" id="cariBtn" style="margin-top:8px">📇 Cariler (müşteriler)</button>
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
@@ -252,6 +253,32 @@ html,body{overscroll-behavior-y:none}
   <div id="pList"></div>
   <button class="btn sec hide" id="pMore">Daha fazla göster</button>
 </div>
+<div class="sheet" id="shCari">
+  <div class="grab"></div>
+  <h2>📇 Cariler</h2>
+  <div class="meta" id="cStat"></div>
+  <input class="search" id="cq" type="search" placeholder="Cari ara (ad, kod, telefon)…" autocomplete="off" style="margin-bottom:8px">
+  <div id="cList"></div>
+  <button class="btn sec hide" id="cMore">Daha fazla göster</button>
+  <div class="rolebox" style="margin-top:14px">
+    <b>📥 Wolvox'tan cari listesi yükle</b>
+    <p class="small" style="margin:6px 0">Wolvox'ta cari listesini Excel'e aktar. "Cari Kodu", "Ticari Ünvan / Cari Adı", "Telefon / Cep", "Adres", "İl", "Vergi Dairesi", "Vergi No" sütunları otomatik tanınır. Aynı kodlu cari güncellenir.</p>
+    <input type="file" id="cFile" accept=".xlsx,.xls,.csv" style="font-size:15px">
+    <div class="small" id="cImp" style="white-space:pre-line;margin-top:6px"></div>
+  </div>
+</div>
+<div class="sheet" id="shCust">
+  <div class="grab"></div>
+  <h2 id="kName"></h2>
+  <div class="meta" id="kMeta"></div>
+  <div class="fld"><label>Cari adı</label><input id="kN"></div>
+  <div class="two"><div class="fld"><label>Cari kodu</label><input id="kCode"></div><div class="fld"><label>Telefon</label><input id="kPhone" inputmode="tel"></div></div>
+  <div class="fld"><label>Adres</label><input id="kAddr"></div>
+  <div class="two"><div class="fld"><label>İl / ilçe</label><input id="kCity"></div><div class="fld"><label>Vergi dairesi</label><input id="kTaxO"></div></div>
+  <div class="two"><div class="fld"><label>Vergi no</label><input id="kTaxN" inputmode="numeric"></div><div class="fld"><label>Not</label><input id="kNote"></div></div>
+  <button class="btn pri" id="kSave">Kaydet</button>
+  <div class="log" id="kBuys"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -261,7 +288,7 @@ const EMAIL_DOMAIN="erkatem.com";
 
 const $=id=>document.getElementById(id);
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
-const PERM={manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
+const PERM={cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
 let costs={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
 const can=a=>!!me&&PERM[a].includes(me.role);
 const tl=n=>(n===null||n===undefined||n==="")?"":"₺"+Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -330,6 +357,7 @@ async function boot(){
   $("teamSec").classList.toggle("hide",!can("team"));
   $("impSec").classList.toggle("hide",!can("imp"));
   $("priceBtn").classList.toggle("hide",!can("price"));
+  $("cariBtn").classList.toggle("hide",!can("cari"));
   view("mainView");
   await loadItems();
   loadCustomers();
@@ -351,7 +379,8 @@ async function loadItems(){
   }catch(e){status("Liste yüklenemedi: "+esc(errTr(e.message)));$("list").innerHTML=""}
 }
 async function loadCustomers(){
-  const {data}=await sb.from("customers").select("id,name").order("name").limit(2000);
+  const all=[];for(let from=0;;from+=1000){const {data,error}=await sb.from("customers").select("id,name,code").order("name").range(from,from+999);if(error||!data)break;all.push(...data);if(data.length<1000)break}
+  const data=all;
   customers=data||[];
   $("custList").innerHTML=customers.map(c=>`<option value="${esc(c.name)}">`).join("");
 }
@@ -385,7 +414,7 @@ function render(){
 }
 let lockY=0;
 function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
-function open(id){["shItem","shForm","shMenu","shPrice"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));render()});
@@ -598,6 +627,74 @@ $("pList").addEventListener("change",async e=>{
     $("pStat").textContent=`Satış fiyatı girilen: ${fmt(act.filter(i=>i.sell_price!=null).length)} / ${fmt(act.length)} · Alış: ${fmt(act.filter(i=>costs[i.id]!=null).length)} / ${fmt(act.length)}`;
   }catch(err){st.textContent="❌";toast("Kaydedilemedi: "+errTr(err.message))}
 });
+
+/* ---------- Cariler ---------- */
+let cinfo={},cShown=50,curCust=null;
+async function loadCinfo(){cinfo={};for(let from=0;;from+=1000){const {data,error}=await sb.from("customer_info").select("*").range(from,from+999);if(error||!data)break;data.forEach(x=>cinfo[x.customer_id]=x);if(data.length<1000)break}}
+$("cariBtn").onclick=async()=>{cShown=50;open("shCari");$("cList").innerHTML=`<div class="small">Yükleniyor…</div>`;await Promise.all([loadCustomers(),loadCinfo()]);renderCari()};
+$("cq").oninput=()=>{cShown=50;renderCari()};
+$("cMore").onclick=()=>{cShown+=50;renderCari()};
+function renderCari(){
+  $("cStat").textContent=`${fmt(customers.length)} cari`;
+  const q=norm($("cq").value.trim());
+  const arr=customers.filter(c=>!q||norm(c.name+" "+(c.code||"")+" "+((cinfo[c.id]||{}).phone||"")).includes(q));
+  $("cList").innerHTML=arr.length?arr.slice(0,cShown).map(c=>{const i=cinfo[c.id]||{};return `<div class="row" data-cid="${esc(c.id)}"><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">${esc([c.code,i.phone,i.city].filter(Boolean).join(" · ")||"—")}</div></div></div>`}).join(""):`<div class="empty">Cari yok. Aşağıdan Wolvox listesini yükle.</div>`;
+  $("cMore").classList.toggle("hide",arr.length<=cShown);
+}
+$("cList").onclick=e=>{const r=e.target.closest("[data-cid]");if(r)showCust(r.dataset.cid)};
+async function showCust(id){
+  const c=customers.find(x=>x.id===id);if(!c)return;curCust=c;const i=cinfo[id]||{};
+  $("kName").textContent=c.name;$("kMeta").textContent=c.code?"Kod: "+c.code:"";
+  $("kN").value=c.name;$("kCode").value=c.code||"";$("kPhone").value=i.phone||"";$("kAddr").value=i.address||"";$("kCity").value=i.city||"";$("kTaxO").value=i.tax_office||"";$("kTaxN").value=i.tax_no||"";$("kNote").value=i.note||"";
+  open("shCust");
+  $("kBuys").innerHTML=`<h3>Son alımları</h3><div class="small">Yükleniyor…</div>`;
+  const {data}=await sb.from("moves").select("item_id,delta,unit_price,created_at").eq("customer_id",id).eq("kind","cikis").order("created_at",{ascending:false}).limit(30);
+  if(curCust!==c)return;
+  const nm=iid=>(items.find(x=>x.id===iid)||{}).name||"Ürün";
+  $("kBuys").innerHTML=(data&&data.length)?`<h3>Son alımları</h3>`+data.map(l=>`<div class="lg"><div>${esc(nm(l.item_id))}<div class="d">${dts(l.created_at)} · ${fmt(-l.delta)} adet</div></div><div><b>${tl(l.unit_price)}</b></div></div>`).join(""):`<h3>Son alımları</h3><div class="small">Henüz kayıtlı satış yok.</div>`;
+}
+$("kSave").onclick=async()=>{
+  if(!curCust)return;const name=$("kN").value.trim();if(!name)return toast("Cari adı gerekli");
+  $("kSave").disabled=true;
+  try{
+    const {error}=await sb.from("customers").update({name,code:$("kCode").value.trim()||null}).eq("id",curCust.id);if(error)throw error;
+    const info={customer_id:curCust.id,phone:$("kPhone").value.trim()||null,address:$("kAddr").value.trim()||null,city:$("kCity").value.trim()||null,tax_office:$("kTaxO").value.trim()||null,tax_no:$("kTaxN").value.trim()||null,note:$("kNote").value.trim()||null,updated_at:new Date().toISOString()};
+    const {error:e2}=await sb.from("customer_info").upsert(info);if(e2)throw e2;
+    Object.assign(curCust,{name,code:info.code});curCust.code=$("kCode").value.trim()||null;cinfo[curCust.id]=info;
+    toast("Kaydedildi");open("shCari");renderCari();
+  }catch(e){toast(/duplicate/i.test(e.message)?"Bu ad ya da kod başka caride var":"Kaydedilemedi: "+errTr(e.message))}
+  finally{$("kSave").disabled=false}
+};
+$("cFile").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;if(typeof XLSX==="undefined")return toast("Excel okuyucu yüklenemedi");
+  const out=$("cImp");out.textContent="Dosya okunuyor…";
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+    if(!rows.length){out.textContent="Dosyada satır yok.";return}
+    const r0=rows[0];
+    const col=k=>findCol(r0,k);
+    const cCode=col(["cari kod","cari no","hesap kod"]),cName=col(["ticari unvan","unvan","cari ad","firma ad","adi"]),cPhone=col(["cep","telefon","tel"]),
+      cAddr=col(["adres"]),cCity=(Object.keys(r0).find(k=>["il","ilce","il/ilce","sehir"].includes(norm(k).trim()))||col(["ilce","sehir","il /","il/"])),cTaxO=col(["vergi dairesi","v.d","vd"]),cTaxN=col(["vergi no","vergi numara","tc kimlik","vkn"]);
+    if(!cName){out.textContent="Cari adı sütunu bulunamadı. Başlıklar: "+Object.keys(r0).join(", ");return}
+    await loadCustomers();
+    const byCode=new Map(customers.filter(c=>c.code).map(c=>[c.code,c])),byName=new Map(customers.map(c=>[norm(c.name),c]));
+    const recs=[];const seen=new Set();
+    for(const r of rows){const name=String(r[cName]).trim().slice(0,120);if(!name)continue;const code=cCode?String(r[cCode]).trim()||null:null;
+      const key=code||norm(name);if(seen.has(key))continue;seen.add(key);
+      recs.push({name,code,info:{phone:cPhone?String(r[cPhone]).trim()||null:null,address:cAddr?String(r[cAddr]).trim()||null:null,city:cCity?String(r[cCity]).trim()||null:null,tax_office:cTaxO?String(r[cTaxO]).trim()||null:null,tax_no:cTaxN?String(r[cTaxN]).trim()||null:null}})}
+    const upd=[],ins=[];
+    for(const r of recs){const ex=(r.code&&byCode.get(r.code))||byName.get(norm(r.name));if(ex){r.id=ex.id;upd.push(r)}else ins.push(r)}
+    let done=0;const total=recs.length;const prog=()=>out.textContent=`Sütunlar: ${[cCode,cName,cPhone,cAddr,cCity,cTaxO,cTaxN].filter(Boolean).join(", ")}\n${done}/${total} cari işlendi (${ins.length} yeni, ${upd.length} güncelleme)`;
+    for(let i=0;i<ins.length;i+=500){const b=ins.slice(i,i+500);const {data,error}=await sb.from("customers").insert(b.map(r=>({name:r.name,code:r.code}))).select("id");if(error)throw error;data.forEach((d,k)=>b[k].id=d.id);done+=b.length;prog()}
+    for(let i=0;i<upd.length;i+=500){const b=upd.slice(i,i+500);const {error}=await sb.from("customers").upsert(b.map(r=>({id:r.id,name:r.name,code:r.code})));if(error)throw error;done+=b.length;prog()}
+    const infos=recs.filter(r=>r.id).map(r=>({customer_id:r.id,...r.info,updated_at:new Date().toISOString()}));
+    for(let i=0;i<infos.length;i+=500){const {error}=await sb.from("customer_info").upsert(infos.slice(i,i+500));if(error)throw error}
+    out.textContent+=`\n✅ Bitti`;
+    await Promise.all([loadCustomers(),loadCinfo()]);renderCari();
+  }catch(x){out.textContent+="\n❌ Hata: "+errTr(x.message||String(x))}
+  e.target.value="";
+};
 
 $("copyBtn").onclick=async()=>{
   const low=items.filter(i=>!i.passive&&(isLow(i)||isZero(i)));
