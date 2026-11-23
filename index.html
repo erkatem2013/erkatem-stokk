@@ -104,6 +104,9 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 .prow label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
 .prow .pf{flex:1;min-width:0}
 #shPrice{max-height:96vh}
+html,body{overscroll-behavior-y:none}
+.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+body.lock{position:fixed;left:0;right:0;overflow:hidden}
 </style>
 </head>
 <body>
@@ -356,7 +359,9 @@ function render(){
     <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div></div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
 }
-function open(id){["shItem","shForm","shMenu","shPrice"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+let lockY=0;
+function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
+function open(id){["shItem","shForm","shMenu","shPrice"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);lockBody(!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));render()});
 $("q").oninput=render;
