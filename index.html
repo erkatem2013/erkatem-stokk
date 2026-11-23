@@ -112,7 +112,7 @@ html,body{overscroll-behavior-y:none}
 .dl{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .dl .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}.dl .s{font-size:12.5px;color:var(--mut);margin-top:2px}
 .bdg{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
-.bdg.taslak{background:#eee}.bdg.gonderildi{background:#dbeafe;color:#1e40af}.bdg.bekliyor{background:#fef3c7;color:#92400e}.bdg.hazirlaniyor{background:#e0e7ff;color:#3730a3}.bdg.teslim{background:#dcfce7;color:#166534}.bdg.siparis{background:#dcfce7;color:#166534}
+.bdg.np{background:#fee2e2;color:#991b1b}.bdg.taslak{background:#eee}.bdg.gonderildi{background:#dbeafe;color:#1e40af}.bdg.bekliyor{background:#fef3c7;color:#92400e}.bdg.hazirlaniyor{background:#e0e7ff;color:#3730a3}.bdg.teslim{background:#dcfce7;color:#166534}.bdg.siparis{background:#dcfce7;color:#166534}
 .ln{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:#fff}
 .ln .nm{font-weight:600;font-size:14.5px;display:flex;justify-content:space-between;gap:8px}
 .ln .g{display:flex;gap:6px;margin-top:6px}.ln .g>div{flex:1;min-width:0}
@@ -351,9 +351,9 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div class="sug hide" id="dSug"></div>
   <div id="dLines"></div>
   <div class="tot" id="dTot"></div>
-  <div class="fld"><label>Not (belgede görünür)</label><input id="dNote" placeholder="ör. Fiyatlara nakliye dahildir."></div>
+  <div class="fld"><label id="dNoteL">Not (belgede görünür)</label><input id="dNote" placeholder="ör. Fiyatlara nakliye dahildir."></div>
   <button class="btn pri" id="dSave">Kaydet</button>
-  <div class="two"><button class="btn sec" id="dPdf">🖨️ PDF / Yazdır</button><button class="btn sec" id="dWa">💬 WhatsApp</button></div>
+  <div class="two" id="dOut"><button class="btn sec" id="dPdf">🖨️ PDF / Yazdır</button><button class="btn sec" id="dWa">💬 WhatsApp</button></div>
   <button class="btn sec hide" id="dToOrder">📦 Siparişe çevir</button>
   <button class="btn in hide" id="dDeliver" style="color:#fff">✅ Teslim edildi (stoktan düş)</button>
   <button class="btn del hide" id="dDel">Sil</button>
@@ -896,6 +896,7 @@ const DST={taslak:"Taslak",gonderildi:"Gönderildi",siparis:"Siparişe çevrildi
 const EXT_WORDS=["kavanoz","saklama kab","saklama kut","girgir","su kovasi"];
 const isExt=n=>{n=norm(n);return EXT_WORDS.some(w=>n.includes(w))};
 let dKind="teklif",docs=[],cdoc=null,dlines=[];
+const BASIC=()=>!can("docs"); // depocu: fiyatsız sipariş listesi
 const money=n=>Number(n||0).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
 $("docsBtn").onclick=()=>{open("shDocs");loadDocs()};
 document.querySelectorAll("[data-dk]").forEach(c=>c.onclick=()=>{dKind=c.dataset.dk;document.querySelectorAll("[data-dk]").forEach(x=>x.classList.toggle("on",x===c));$("newDoc").textContent=dKind==="teklif"?"+ Yeni teklif":"+ Yeni sipariş";loadDocs()});
@@ -907,11 +908,19 @@ async function loadDocs(){
   const cn=id=>(customers.find(c=>c.id===id)||{}).name||"Cari seçilmedi";
   $("docList").innerHTML=docs.length?docs.map(d=>{const t=(d.doc_lines||[]).reduce((a,l)=>a+(l.qty||0)*(l.price||0)*(1+(l.vat||0)/100),0);
     return `<div class="dl" data-did="${esc(d.id)}"><div class="t"><span>${esc(d.no||"")} · ${esc(cn(d.customer_id))}</span><span>${money(t)} ₺</span></div>
-    <div class="s">${new Date(d.created_at).toLocaleDateString("tr-TR")} · ${(d.doc_lines||[]).length} kalem · <span class="bdg ${esc(d.status)}">${DST[d.status]||d.status}</span></div></div>`}).join(""):`<div class="empty">Henüz ${dKind==="teklif"?"teklif":"sipariş"} yok.</div>`;
+    <div class="s">${new Date(d.created_at).toLocaleDateString("tr-TR")} · ${(d.doc_lines||[]).length} kalem · <span class="bdg ${esc(d.status)}">${DST[d.status]||d.status}</span>${d.kind==="siparis"&&d.status!=="teslim"&&(d.doc_lines||[]).some(l=>l.price==null)?` <span class="bdg np">💰 Fiyat bekliyor</span>`:""}</div></div>`}).join(""):`<div class="empty">Henüz ${dKind==="teklif"?"teklif":"sipariş"} yok.</div>`;
 }
 $("docList").onclick=e=>{const r=e.target.closest("[data-did]");if(r)openDoc(docs.find(d=>d.id===r.dataset.did))};
 $("newDoc").onclick=()=>openDoc(null);
+async function openBasic(id){
+  const [{data:h,error:e1},{data:ls,error:e2}]=await Promise.all([sb.rpc("order_head",{p_doc:id}),sb.rpc("pick_list",{p_doc:id})]);
+  if(e1||e2||!h||!h.length)return toast("Açılamadı: "+errTr((e1||e2||{}).message||"bulunamadı"));
+  cdoc={...h[0],kind:"siparis"};dlines=(ls||[]).map(l=>({item_id:l.item_id,name:l.name,unit:l.unit,qty:l.qty,picked:l.picked}));
+  $("dCust").value=cdoc.customer_id?((customers.find(c=>c.id===cdoc.customer_id)||{}).name||""):"";
+  $("dNote").value=cdoc.note||"";$("dAdd").value="";$("dSug").classList.add("hide");renderDoc();open("shDoc");
+}
 async function openDoc(d){
+  if(BASIC()&&d&&d.id)return openBasic(d.id);
   cdoc=d?{...d}:{kind:dKind,status:dKind==="teklif"?"taslak":"bekliyor"};dlines=[];
   if(d&&d.id){const {data}=await sb.from("doc_lines").select("*").eq("doc_id",d.id).order("pos");dlines=(data||[]).map(l=>({...l}))}
   $("dCust").value=d&&d.customer_id?((customers.find(c=>c.id===d.customer_id)||{}).name||""):"";
@@ -925,10 +934,20 @@ function renderTotals(){
   $("dTot").innerHTML=`<div><span>Ara toplam (KDV hariç)</span><span>${money(sub)} ₺</span></div>`+Object.keys(vats).filter(v=>vats[v]).sort((a,b)=>b-a).map(v=>`<div><span>KDV %${v}</span><span>${money(vats[v])} ₺</span></div>`).join("")+`<div class="g"><span>Genel toplam</span><span>${money(sub+vt)} ₺</span></div>`;
 }
 function renderDoc(){
-  const k=cdoc.kind;
-  $("dTitle").textContent=(cdoc.no?cdoc.no+" · ":"")+(k==="teklif"?"Teklif":"Sipariş");
-  $("dMeta").innerHTML=cdoc.id?`<span class="bdg ${esc(cdoc.status)}">${DST[cdoc.status]||cdoc.status}</span> · ${new Date(cdoc.created_at).toLocaleDateString("tr-TR")}`:"Yeni";
+  const k=cdoc.kind,bs=BASIC();
+  const np=k==="siparis"?dlines.filter(l=>l.price==null).length:0;
+  $("dTitle").textContent=(cdoc.no?cdoc.no+" · ":"")+(bs?"Sipariş listesi":k==="teklif"?"Teklif":"Sipariş");
+  $("dMeta").innerHTML=(cdoc.id?`<span class="bdg ${esc(cdoc.status)}">${DST[cdoc.status]||cdoc.status}</span>${cdoc.created_at?" · "+new Date(cdoc.created_at).toLocaleDateString("tr-TR"):""}`:"Yeni")+
+    (bs?`<div class="small" style="margin-top:4px">Ürünleri ve miktarları yaz, Kaydet'e bas. Fiyatları yönetici girecek.</div>`:np&&cdoc.status!=="teslim"?` · <span class="bdg np">💰 ${np} kalemde fiyat bekliyor</span>`:"");
   const locked=cdoc.status==="teslim";
+  $("dNoteL").textContent=bs?"Not":"Not (belgede görünür)";$("dNote").placeholder=bs?"ör. Acil, öğlene kadar":"ör. Fiyatlara nakliye dahildir.";
+  $("dTot").classList.toggle("hide",bs);$("dOut").classList.toggle("hide",bs);
+  if(bs){
+    $("dLines").innerHTML=dlines.length?dlines.map((l,i)=>`<div class="ln" data-i="${i}"><div class="nm"><span>${i+1}. ${esc(l.name)}</span>${locked?"":`<button class="x" data-rm="${i}">✕</button>`}</div>
+      <div class="g"><div><label>Miktar (${esc(l.unit||"")})</label><input data-f="qty" type="number" inputmode="decimal" value="${l.qty??""}" ${locked?"disabled":""}></div></div></div>`).join(""):`<div class="small" style="margin-bottom:8px">Henüz ürün eklenmedi. Yukarıdan ara ve dokun.</div>`;
+    $("dSave").classList.toggle("hide",locked);["dToOrder","dDeliver","dDel"].forEach(x=>$(x).classList.add("hide"));
+    ["dCust","dAdd","dNote"].forEach(x=>$(x).disabled=locked);return;
+  }
   $("dLines").innerHTML=dlines.length?dlines.map((l,i)=>`<div class="ln" data-i="${i}"><div class="nm"><span>${i+1}. ${esc(l.name)}</span>${locked?"":`<button class="x" data-rm="${i}">✕</button>`}</div>
     <div class="g"><div><label>Miktar (${esc(l.unit||"")})</label><input data-f="qty" type="number" inputmode="decimal" value="${l.qty??""}" ${locked?"disabled":""}></div>
     <div><label>Birim fiyat ₺</label><input data-f="price" type="number" inputmode="decimal" step="0.01" value="${l.price??""}" ${locked?"disabled":""}></div>
@@ -943,7 +962,7 @@ function renderDoc(){
 }
 $("dLines").addEventListener("input",e=>{const inp=e.target.closest("[data-f]");if(!inp)return;const i=+inp.closest(".ln").dataset.i;const f=inp.dataset.f;
   dlines[i][f]=f==="vat"?Number(inp.value):numOrNull(inp.value);
-  const l=dlines[i];inp.closest(".ln").querySelector(".s b").textContent=money((l.qty||0)*(l.price||0))+" ₺";renderTotals()});
+  const l=dlines[i];const b=inp.closest(".ln").querySelector(".s b");if(!b)return;b.textContent=money((l.qty||0)*(l.price||0))+" ₺";renderTotals()});
 $("dLines").addEventListener("change",e=>{if(e.target.dataset.f==="vat")renderDoc()});
 $("dLines").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(b){dlines.splice(+b.dataset.rm,1);renderDoc()}});
 $("dAdd").oninput=()=>{const q=norm($("dAdd").value.trim());const box=$("dSug");
@@ -951,14 +970,19 @@ $("dAdd").oninput=()=>{const q=norm($("dAdd").value.trim());const box=$("dSug");
   const r=items.filter(i=>!i.passive&&norm(i.name+" "+(i.code||"")).includes(q)).sort((a,b)=>(b.pop_score||0)-(a.pop_score||0)).slice(0,8);
   box.innerHTML=r.length?r.map(i=>`<div data-add="${esc(i.id)}">${esc(i.name)} <span class="small">· ${esc(i.unit||"")}${i.sell_price!=null?" · "+tl(i.sell_price):""}</span></div>`).join(""):`<div class="small">Sonuç yok</div>`;box.classList.remove("hide")};
 $("dSug").onclick=async e=>{const r=e.target.closest("[data-add]");if(!r)return;const it=items.find(i=>i.id===r.dataset.add);if(!it)return;
-  let price=it.sell_price??null;const c=findCust($("dCust").value);
-  if(c){const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}
+  let price=BASIC()?null:(it.sell_price??null);const c=findCust($("dCust").value);
+  if(c&&!BASIC()){const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}
   dlines.push({item_id:it.id,name:it.name,unit:it.unit,qty:1,price,vat:Number(it.vat??20),pos:dlines.length,picked:false});
-  $("dAdd").value="";$("dSug").classList.add("hide");renderDoc();toast(price==null?"Eklendi, fiyat gir":"Eklendi")};
+  $("dAdd").value="";$("dSug").classList.add("hide");renderDoc();toast(price==null&&!BASIC()?"Eklendi, fiyat gir":"Eklendi")};
 async function saveDoc(){
   const c=findCust($("dCust").value);
   if($("dCust").value.trim()&&!c){toast("Cari bulunamadı, listeden seç");return false}
   if(!dlines.length){toast("En az bir ürün ekle");return false}
+  if(BASIC()){
+    const {data,error}=await sb.rpc("save_order_basic",{p_doc:cdoc.id||null,p_customer:c?c.id:null,p_note:$("dNote").value.trim()||null,p_lines:dlines.map(l=>({item_id:l.item_id||null,name:l.name,unit:l.unit||null,qty:l.qty||0}))});
+    if(error){toast("Kaydedilemedi: "+errTr(error.message));return false}
+    cdoc.id=data.id;cdoc.no=data.no;toast("Kaydedildi: "+data.no+" · fiyatları yönetici girecek");open("shPick");loadPick();return true;
+  }
   const head={kind:cdoc.kind,customer_id:c?c.id:null,note:$("dNote").value.trim()||null,updated_at:new Date().toISOString()};
   try{
     if(!cdoc.id){const {data,error}=await sb.from("docs").insert({...head,status:cdoc.status}).select().single();if(error)throw error;Object.assign(cdoc,data)}
@@ -1086,7 +1110,8 @@ const M = (() => {
 
 let pRows=[];
 custSuggest("pCust","pCustSug");
-$("pasteBtn").onclick=()=>{open("shPaste");if(!$("pText").value)$("pRes").innerHTML="";};
+function openPaste(){open("shPaste");document.querySelector('[data-mk2="teklif"]').classList.toggle("hide",BASIC());if(!$("pText").value)$("pRes").innerHTML="";}
+$("pasteBtn").onclick=openPaste;
 $("pParse").onclick=async()=>{
   const txt=$("pText").value.trim();if(!txt)return toast("Mesajı yapıştır");
   $("pParse").disabled=true;$("pRes").innerHTML=`<div class="small">Ürünler aranıyor…</div>`;
@@ -1123,7 +1148,7 @@ document.querySelectorAll("[data-mk2]").forEach(b=>b.onclick=async()=>{
   b.disabled=true;
   const lines=[];
   for(const r of rows){const it=items.find(i=>i.id===r.sel);if(!it)continue;
-    let price=it.sell_price??null;if(c){const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}
+    let price=BASIC()?null:(it.sell_price??null);if(c&&!BASIC()){const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}
     lines.push({item_id:it.id,name:it.name,unit:it.unit,qty:r.qty||1,price,vat:Number(it.vat??20),pos:lines.length,picked:false})}
   b.disabled=false;
   dKind=b.dataset.mk2;document.querySelectorAll("[data-dk]").forEach(x=>x.classList.toggle("on",x.dataset.dk===dKind));$("newDoc").textContent=dKind==="teklif"?"+ Yeni teklif":"+ Yeni sipariş";
@@ -1140,10 +1165,16 @@ async function loadPick(){
   pkDoc=null;$("kTitle").textContent="📦 Hazırlanacak siparişler";$("pkBody").innerHTML=`<div class="small">Yükleniyor…</div>`;
   const {data,error}=await sb.rpc("open_orders");
   if(error){$("pkBody").innerHTML=`<div class="note">${esc(errTr(error.message))}</div>`;return}
-  $("pkBody").innerHTML=(data&&data.length)?data.map(o=>`<div class="dl" data-pk="${esc(o.id)}" data-no="${esc(o.no)}" data-cu="${esc(o.customer||"")}"><div class="t"><span>${esc(o.no)} · ${esc(o.customer||"")}</span><span>${o.picked}/${o.lines}</span></div><div class="s">${new Date(o.created_at).toLocaleDateString("tr-TR")} · <span class="bdg ${esc(o.status)}">${DST[o.status]}</span></div></div>`).join(""):`<div class="empty">Hazırlanacak sipariş yok 👍</div>`;
+  const bs=BASIC();
+  const top=bs?`<div class="two" style="margin-bottom:12px"><button class="btn pri" id="pkNew" style="margin:0">📝 Liste yaz</button><button class="btn sec" id="pkPaste" style="margin:0">📋 WhatsApp'tan</button></div>`:"";
+  $("pkBody").innerHTML=top+((data&&data.length)?data.map(o=>`<div class="dl" data-pk="${esc(o.id)}" data-no="${esc(o.no)}" data-cu="${esc(o.customer||"")}" data-mine="${o.mine?1:""}"><div class="t"><span>${esc(o.no)} · ${esc(o.customer||"Cari yok")}</span><span>${o.picked}/${o.lines}</span></div><div class="s">${new Date(o.created_at).toLocaleDateString("tr-TR")} · <span class="bdg ${esc(o.status)}">${DST[o.status]}</span>${o.mine&&bs?` <span class="bdg taslak">✍️ Senin listen</span>`:""}${!bs&&o.unpriced>0?` <span class="bdg np">💰 Fiyat bekliyor (${o.unpriced})</span>`:""}</div></div>`).join(""):`<div class="empty">Hazırlanacak sipariş yok 👍</div>`);
 }
 $("pkBody").addEventListener("click",async e=>{
-  const o=e.target.closest("[data-pk]");if(o&&!pkDoc){pkDoc={id:o.dataset.pk,no:o.dataset.no,cu:o.dataset.cu};return showPick()}
+  if(e.target.id==="pkNew"){dKind="siparis";return openDoc(null)}
+  if(e.target.id==="pkPaste")return openPaste();
+  if(e.target.id==="pkEdit")return openBasic(pkDoc.id);
+  if(e.target.id==="pkOpen"){const {data,error}=await sb.from("docs").select("*").eq("id",pkDoc.id).single();if(error)return toast(errTr(error.message));dKind="siparis";return openDoc(data)}
+  const o=e.target.closest("[data-pk]");if(o&&!pkDoc){pkDoc={id:o.dataset.pk,no:o.dataset.no,cu:o.dataset.cu,mine:!!o.dataset.mine};return showPick()}
   if(e.target.id==="pkBack")return loadPick();
   if(e.target.id==="pkDeliver"){if(e.target.dataset.sure!=="1"){e.target.dataset.sure="1";e.target.textContent="Stoktan düşülecek, emin misin? Tekrar bas";return}
     const {data,error}=await sb.rpc("deliver_order",{p_doc:pkDoc.id});if(error)return toast("Olmadı: "+errTr(error.message));toast(`Teslim edildi, ${data} kalem stoktan düştü`);await loadItems();loadPick()}
@@ -1155,7 +1186,8 @@ async function showPick(){
   $("kTitle").textContent=`📦 ${pkDoc.no} · ${pkDoc.cu}`;
   const {data,error}=await sb.rpc("pick_list",{p_doc:pkDoc.id});if(error)return toast(errTr(error.message));
   const ext=(data||[]).filter(l=>isExt(l.name));
-  $("pkBody").innerHTML=`<button class="chip" id="pkBack" style="margin-bottom:10px">← Siparişler</button>`+(ext.length?`<div class="note">🛒 Dışarıdan alınacak: ${ext.map(l=>esc(l.name)).join(", ")}</div>`:"")+
+  const bs=BASIC();
+  $("pkBody").innerHTML=`<button class="chip" id="pkBack" style="margin-bottom:10px">← Siparişler</button>`+(bs&&pkDoc.mine?`<button class="chip" id="pkEdit" style="margin:0 0 10px 6px">✏️ Listeyi düzenle</button>`:"")+(!bs?`<button class="chip" id="pkOpen" style="margin:0 0 10px 6px">💰 Fiyatları gir / aç</button>`:"")+(ext.length?`<div class="note">🛒 Dışarıdan alınacak: ${ext.map(l=>esc(l.name)).join(", ")}</div>`:"")+
     (data||[]).map(l=>`<label class="pk ${l.picked?"done":""} ${isExt(l.name)?"ext":""}"><input type="checkbox" data-line="${esc(l.id)}" ${l.picked?"checked":""}><div style="flex:1"><b>${fmt(l.qty)} ${esc(l.unit||"")}</b> · ${esc(l.name)}</div></label>`).join("")+
     `<button class="btn in" id="pkDeliver" style="color:#fff">✅ Hepsi hazır, teslim edildi</button>`;
 }
