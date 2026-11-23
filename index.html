@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="erkatem Stok">
+<meta name="theme-color" content="#111111">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<title>erkatem Stok</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--y:#FFC400;--k:#111;--bg:#f3f3f1;--line:#e6e6e3;--red:#d62828;--grn:#1f9d55;--mut:#777}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--k);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+.hide{display:none!important}
+header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:5px solid var(--y)}
+.brand{display:flex;align-items:center;justify-content:space-between}
+.brand h1{margin:0;font-size:22px}.brand h1 b{color:var(--y)}
+.who{font-size:12.5px;color:#bbb;margin-top:2px}.who b{color:var(--y)}
+.menu-btn{background:none;border:1px solid #444;color:#fff;border-radius:10px;padding:7px 11px;font-size:14px}
+.stats{display:flex;gap:8px;margin-top:10px}
+.stat{flex:1;background:#222;border-radius:10px;padding:8px 10px}
+.stat .n{font-size:20px;font-weight:800}.stat .l{font-size:11px;color:#bbb;text-transform:uppercase;letter-spacing:.5px}
+.stat.warn .n{color:#ff6b6b}
+.tools{padding:12px 14px 4px}
+.search{width:100%;font-size:17px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:#fff;outline:none}
+.search:focus{border-color:var(--y)}
+.chips{display:flex;gap:8px;margin-top:10px;overflow-x:auto}
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:14px;white-space:nowrap;color:var(--k)}
+.chip.on{background:var(--k);color:var(--y);border-color:var(--k);font-weight:700}
+.list{padding:6px 14px}
+.row{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.row .info{flex:1;min-width:0}
+.row .nm{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .sub{font-size:12.5px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qty{flex:none;min-width:72px;text-align:right}
+.qty .v{font-size:20px;font-weight:800}.qty .u{font-size:11.5px;color:var(--mut)}
+.row.low .qty .v{color:var(--red)}
+.tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:2px;background:var(--red);color:#fff}
+.empty{text-align:center;color:var(--mut);padding:40px 20px;font-size:15px;line-height:1.5}
+.note{margin:8px 14px;padding:10px 12px;border-radius:10px;background:#fff6d6;font-size:13.5px;color:#6b5200}
+.fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:6;width:62px;height:62px;border-radius:50%;border:none;background:var(--y);color:var(--k);font-size:34px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10;display:none}.ov.show{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:11;background:#fff;border-radius:18px 18px 0 0;max-height:92vh;overflow-y:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .22s ease}
+.sheet.show{transform:none}
+.grab{width:44px;height:5px;border-radius:3px;background:#ddd;margin:0 auto 12px}
+.sheet h2{margin:0 0 4px;font-size:20px}
+.meta{color:var(--mut);font-size:13px;margin-bottom:12px}
+.big{display:flex;align-items:baseline;justify-content:center;gap:8px;background:var(--bg);border-radius:14px;padding:14px;margin-bottom:12px}
+.big .v{font-size:44px;font-weight:900}.big .u{color:var(--mut);font-size:15px}.big.low .v{color:var(--red)}
+.amt{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.amt button{width:52px;height:52px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-size:26px;font-weight:700;color:var(--k)}
+.amt input{flex:1;height:52px;text-align:center;font-size:24px;font-weight:800;border:1.5px solid var(--line);border-radius:12px;outline:none;min-width:0}
+.inout{display:flex;gap:10px;margin-bottom:10px}
+.inout button{flex:1;height:54px;border:none;border-radius:12px;font-size:17px;font-weight:800;color:#fff}
+.in{background:var(--grn)}.out{background:var(--red)}
+.fld{margin-bottom:10px}
+.fld label{display:block;font-size:12.5px;color:var(--mut);margin-bottom:4px;font-weight:600}
+.fld input,.fld select{width:100%;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;outline:none;color:var(--k)}
+.fld input:focus{border-color:var(--y)}
+.fld input:disabled,.fld select:disabled{background:var(--bg);color:#999}
+.two{display:flex;gap:10px}.two>*{flex:1}
+.btn{width:100%;height:50px;border:none;border-radius:12px;font-size:16px;font-weight:800;margin-top:6px}
+.btn.pri{background:var(--k);color:var(--y)}.btn.sec{background:var(--bg);color:var(--k)}
+.btn.del{background:#fff;color:var(--red);border:1.5px solid #f2c4c4}
+.btn:disabled{opacity:.5}
+.log{margin-top:14px}.log h3{font-size:14px;margin:0 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+.lg{display:flex;justify-content:space-between;font-size:14px;padding:8px 0;border-top:1px solid var(--line)}
+.lg .d{color:var(--mut);font-size:12px}.lg .p{color:var(--grn);font-weight:800}.lg .m{color:var(--red);font-weight:800}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--k);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.confirm{background:#fff1f1;border-radius:12px;padding:12px;margin-top:10px}
+.confirm p{margin:0 0 8px;font-size:14px}
+.prog{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:10px 0}.prog div{height:100%;width:0;background:var(--y);transition:width .2s}
+.small{font-size:13px;color:var(--mut);line-height:1.45}
+.chk{display:flex;gap:10px;align-items:center;font-size:15px;margin:8px 0}.chk input{width:22px;height:22px;flex:none}
+.mrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.mrow .mn{flex:1;font-weight:600;font-size:15px;min-width:0}.mrow .mn small{display:block;font-weight:400;color:var(--mut);font-size:12px}
+.mrow select{font-size:15px;padding:8px;border-radius:9px;border:1.5px solid var(--line);background:#fff}
+.rolebox{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.55;margin:10px 0}
+/* giriş */
+.auth{min-height:100vh;display:flex;flex-direction:column}
+.auth .top{background:var(--k);color:#fff;padding:calc(40px + env(safe-area-inset-top)) 24px 28px;border-bottom:6px solid var(--y)}
+.auth .top h1{margin:0;font-size:32px}.auth .top h1 b{color:var(--y)}
+.auth .top p{margin:6px 0 0;color:#bbb}
+.auth .box{padding:22px 20px}
+.tabs{display:flex;background:#e9e9e6;border-radius:12px;padding:4px;margin-bottom:16px}
+.tabs button{flex:1;border:none;background:none;padding:10px;border-radius:9px;font-size:15px;font-weight:700;color:#555}
+.tabs button.on{background:#fff;color:var(--k);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.err{color:var(--red);font-size:14px;margin:6px 0;min-height:18px}
+.gate{padding:40px 22px;text-align:center}.gate .btn.sec{background:#fff;border:1.5px solid var(--line)}.gate p{color:var(--mut);line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- Giriş ekranı -->
+<div class="auth hide" id="authView">
+  <div class="top"><h1><b>erkatem</b> Stok</h1><p>Dükkân stok takibi</p></div>
+  <div class="box">
+    <div class="tabs"><button class="on" data-t="in">Giriş yap</button><button data-t="up">Kayıt ol</button></div>
+    <div id="fullBox" class="fld hide"><label>Ad soyad</label><input id="aFull" autocomplete="name" placeholder="ör. Ahmet Yılmaz"></div>
+    <div class="fld"><label>Kullanıcı adı</label><input id="aUser" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="ör. ahmet"></div>
+    <div class="fld"><label>Şifre</label><input id="aPass" type="password" autocomplete="current-password" placeholder="En az 6 karakter"></div>
+    <div class="err" id="aErr"></div>
+    <button class="btn pri" id="aBtn">Giriş yap</button>
+    <p class="small" id="aHint" style="margin-top:14px">Hesabın yoksa "Kayıt ol" sekmesinden kayıt ol. Patron onaylayınca stoka erişebilirsin.</p>
+  </div>
+</div>
+
+<!-- Onay bekleniyor -->
+<div class="hide" id="waitView">
+  <header><div class="brand"><h1><b>erkatem</b> Stok</h1></div></header>
+  <div class="gate"><h2>Onay bekleniyor ⏳</h2><p id="waitTxt"></p><button class="btn sec" id="waitRefresh">Yenile</button><button class="btn sec" id="waitOut">Çıkış yap</button></div>
+</div>
+
+<!-- Ana ekran -->
+<div class="hide" id="mainView">
+<header>
+  <div class="brand"><div><h1><b>erkatem</b> Stok</h1><div class="who" id="who"></div></div><button class="menu-btn" id="menuBtn">☰ Menü</button></div>
+  <div class="stats">
+    <div class="stat"><div class="n" id="sCount">–</div><div class="l">Ürün</div></div>
+    <div class="stat warn"><div class="n" id="sLow">–</div><div class="l">Kritik</div></div>
+    <div class="stat"><div class="n" id="sZero">–</div><div class="l">Stokta yok</div></div>
+  </div>
+</header>
+<div class="tools">
+  <input class="search" id="q" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off">
+  <div class="chips">
+    <button class="chip on" data-f="all">Tümü</button>
+    <button class="chip" data-f="low">Kritik</button>
+    <button class="chip" data-f="zero">Stokta yok</button>
+    <button class="chip" data-f="recent">Son hareket</button>
+    <button class="chip" data-f="passive">Pasif</button>
+  </div>
+</div>
+<div id="status"></div>
+<div class="list" id="list"><div class="empty">Yükleniyor…</div></div>
+<button class="fab hide" id="fab" aria-label="Ürün ekle">+</button>
+</div>
+
+<div class="ov" id="ov"></div>
+
+<!-- Ürün detay -->
+<div class="sheet" id="shItem">
+  <div class="grab"></div>
+  <h2 id="iName"></h2>
+  <div class="meta" id="iMeta"></div>
+  <div class="big" id="iBig"><span class="v" id="iQty">0</span><span class="u" id="iUnit"></span></div>
+  <div id="moveBox">
+    <div class="amt"><button id="mDec">−</button><input id="mAmt" type="number" inputmode="decimal" value="1" min="0"><button id="mInc">+</button></div>
+    <div class="fld"><input id="mNote" placeholder="Not (ör. Deniz Ambalaj siparişi)" maxlength="120"></div>
+    <div class="inout"><button class="in" id="bIn">▲ Giriş</button><button class="out" id="bOut">▼ Çıkış</button></div>
+  </div>
+  <button class="btn sec" id="bEdit">Düzenle</button>
+  <div class="log" id="iLog"></div>
+</div>
+
+<!-- Ürün formu -->
+<div class="sheet" id="shForm">
+  <div class="grab"></div>
+  <h2 id="fTitle">Yeni ürün</h2>
+  <div class="fld"><label>Ürün adı *</label><input id="fName" placeholder="ör. Mare 48'li kağıt havlu"></div>
+  <div class="two">
+    <div class="fld"><label>Stok kodu</label><input id="fCode" placeholder="ST00123"></div>
+    <div class="fld"><label>Marka / grup</label><input id="fBrand" placeholder="ör. Mare"></div>
+  </div>
+  <div class="two">
+    <div class="fld"><label>Birim</label><select id="fUnit"><option>adet</option><option>koli</option><option>paket</option><option>bidon</option><option>kutu</option><option>torba</option><option>kg</option><option>lt</option><option>rulo</option></select></div>
+    <div class="fld"><label id="fQtyL">Mevcut miktar</label><input id="fQty" type="number" inputmode="decimal" value="0"></div>
+  </div>
+  <div class="fld"><label>Kritik seviye (altına düşünce uyar)</label><input id="fMin" type="number" inputmode="decimal" value="0"></div>
+  <label class="chk"><input type="checkbox" id="fPas"> Pasif (satılmıyor, listede gizle)</label>
+  <button class="btn pri" id="fSave">Kaydet</button>
+  <button class="btn del hide" id="fDel">Ürünü sil</button>
+  <div class="confirm hide" id="delBox"><p>Bu ürün ve hareket geçmişi silinsin mi?</p><div class="two"><button class="btn sec" id="delNo">Vazgeç</button><button class="btn out" id="delYes">Evet, sil</button></div></div>
+</div>
+
+<!-- Menü -->
+<div class="sheet" id="shMenu">
+  <div class="grab"></div>
+  <h2>Menü</h2>
+  <div id="teamSec" class="hide">
+    <div class="meta" style="margin-top:6px">👥 Ekip ve roller</div>
+    <div id="team"></div>
+    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, Excel yükle, giriş/çıkış, sayım<br><b>Depocu:</b> giriş, çıkış, sayım<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Bekliyor:</b> hiçbir şey göremez</div>
+    <p class="small">Yeni çalışan: sitenin linkini gönder, "Kayıt ol" ile hesap açsın. Burada görünür, rolünü sen seçersin.</p>
+  </div>
+  <div id="impSec" class="hide">
+    <div class="meta" style="margin-top:14px">📥 Excel'den toplu ürün yükle</div>
+    <p class="small">Wolvox'tan aldığın stok listesini (.xlsx veya .csv) seç. "Stok Kodu", "Stok Adı", "Birim", "Miktar", "Durumu" sütunları otomatik tanınır. Aynı stok kodlu ürün güncellenir, yeniler eklenir.</p>
+    <label class="chk"><input type="checkbox" id="noQty" checked> Miktarları alma (sadece ürün listesi)</label>
+    <label class="chk"><input type="checkbox" id="skipPas" checked> Pasif ürünleri alma</label>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin:8px 0;font-size:15px">
+    <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
+  </div>
+  <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
+  <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
+  <button class="btn del" id="logoutBtn">Çıkış yap</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://ffcrxcllhzkcnjnidbdd.supabase.co";
+const SUPABASE_KEY="sb_publishable_6z5xgxYkLnVUEohzc_nlHA_yXDkMcfU";
+const EMAIL_DOMAIN="erkatem-stok.app";
+
+const $=id=>document.getElementById(id);
+const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
+const PERM={add:["patron","yonetici"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
+let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
+const can=a=>!!me&&PERM[a].includes(me.role);
+const fmt=n=>{n=Number(n)||0;return Number.isInteger(n)?n.toLocaleString("tr-TR"):n.toLocaleString("tr-TR",{maximumFractionDigits:2})};
+const norm=s=>(s||"").toString().toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/ı/g,"i");
+const esc=s=>(s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),2600)}
+function status(h){$("status").innerHTML=h?`<div class="note">${h}</div>`:""}
+function view(v){["authView","waitView","mainView"].forEach(x=>$(x).classList.toggle("hide",x!==v))}
+const isLow=i=>(Number(i.min_qty)||0)>0&&(Number(i.qty)||0)<=(Number(i.min_qty)||0);
+const isZero=i=>(Number(i.qty)||0)<=0;
+const errTr=m=>{m=m||"";
+  if(/Invalid login/i.test(m))return "Kullanıcı adı veya şifre yanlış";
+  if(/already registered|already exists/i.test(m))return "Bu kullanıcı adı alınmış";
+  if(/Password should be/i.test(m))return "Şifre en az 6 karakter olmalı";
+  if(/Database error saving new user/i.test(m))return "Bu kullanıcı adı alınmış";
+  if(/Email not confirmed/i.test(m))return "Hesap onaylı değil (Supabase'te 'Confirm email' kapatılmalı)";
+  if(/Failed to fetch|NetworkError/i.test(m))return "İnternet bağlantısı yok";
+  return m};
+const userToEmail=u=>u+"@"+EMAIL_DOMAIN;
+const cleanUser=u=>norm(u).replace(/[^a-z0-9._-]/g,"");
+
+/* ---------- Giriş ---------- */
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  authMode=b.dataset.t;document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  $("fullBox").classList.toggle("hide",authMode!=="up");$("aBtn").textContent=authMode==="up"?"Kayıt ol":"Giriş yap";
+  $("aPass").autocomplete=authMode==="up"?"new-password":"current-password";$("aErr").textContent="";
+});
+$("aBtn").onclick=async()=>{
+  const u=cleanUser($("aUser").value),p=$("aPass").value;$("aErr").textContent="";
+  if(!u){$("aErr").textContent="Kullanıcı adı gir (harf/rakam)";return}
+  if(p.length<6){$("aErr").textContent="Şifre en az 6 karakter olmalı";return}
+  $("aBtn").disabled=true;
+  try{
+    if(authMode==="up"){
+      const full=$("aFull").value.trim();if(!full){$("aErr").textContent="Ad soyad gir";return}
+      const {data,error}=await sb.auth.signUp({email:userToEmail(u),password:p,options:{data:{username:u,full_name:full}}});
+      if(error)throw error;
+      if(!data.session){const r=await sb.auth.signInWithPassword({email:userToEmail(u),password:p});if(r.error)throw r.error}
+    }else{
+      const {error}=await sb.auth.signInWithPassword({email:userToEmail(u),password:p});if(error)throw error;
+    }
+    await boot();
+  }catch(e){$("aErr").textContent=errTr(e.message)}
+  finally{$("aBtn").disabled=false}
+};
+$("aPass").onkeydown=e=>{if(e.key==="Enter")$("aBtn").click()};
+
+async function logout(){await sb.auth.signOut();me=null;items=[];open(null);view("authView")}
+$("waitOut").onclick=logout;$("logoutBtn").onclick=logout;
+$("waitRefresh").onclick=()=>boot();
+
+/* ---------- Başlat ---------- */
+async function boot(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){view("authView");return}
+  const {data,error}=await sb.from("profiles").select("id,username,full_name,role").eq("id",session.user.id).maybeSingle();
+  if(error||!data){view("authView");$("aErr").textContent=error?errTr(error.message):"Profil bulunamadı";return}
+  me=data;
+  if(me.role==="bekliyor"){$("waitTxt").innerHTML=`Merhaba <b>${esc(me.full_name||me.username)}</b>. Hesabın açıldı, patronun sana rol vermesi bekleniyor.`;view("waitView");return}
+  $("who").innerHTML=`${esc(me.full_name||me.username)} · <b>${ROLES[me.role]}</b>`;
+  $("fab").classList.toggle("hide",!can("add"));
+  $("teamSec").classList.toggle("hide",!can("team"));
+  $("impSec").classList.toggle("hide",!can("imp"));
+  view("mainView");
+  await loadItems();
+  if(can("people"))loadPeople();
+}
+
+async function loadItems(){
+  status("");
+  try{
+    const all=[];
+    for(let from=0;;from+=1000){
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move").order("name").range(from,from+999);
+      if(error)throw error;all.push(...data);if(data.length<1000)break;
+    }
+    items=all;render();
+  }catch(e){status("Liste yüklenemedi: "+esc(errTr(e.message)));$("list").innerHTML=""}
+}
+async function loadPeople(){
+  const {data}=await sb.from("profiles").select("id,username,full_name,role").order("created_at");
+  people={};(data||[]).forEach(p=>people[p.id]=p);
+}
+
+/* ---------- Liste ---------- */
+function render(){
+  const act=items.filter(i=>!i.passive);
+  $("sCount").textContent=fmt(act.length);$("sLow").textContent=fmt(act.filter(isLow).length);$("sZero").textContent=fmt(act.filter(isZero).length);
+  const q=norm($("q").value.trim());
+  let arr=items.filter(i=>filter==="passive"?i.passive:!i.passive).filter(i=>!q||norm(i.name+" "+(i.code||"")+" "+(i.brand||"")).includes(q));
+  if(filter==="low")arr=arr.filter(isLow);
+  if(filter==="zero")arr=arr.filter(isZero);
+  if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
+  if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Menü → Excel'den yükle</b>.":""}</div>`;return}
+  if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
+  $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
+    <div class="info"><div class="nm">${esc(i.name)}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
+    <div class="sub">${esc([i.code,i.brand].filter(Boolean).join(" · ")||"—")}</div></div>
+    <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div></div></div>`).join("")+
+    (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
+}
+function open(id){["shItem","shForm","shMenu"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+$("ov").onclick=()=>open(null);
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));render()});
+$("q").oninput=render;
+$("list").onclick=e=>{const r=e.target.closest(".row");if(r)showItem(r.dataset.id)};
+
+/* ---------- Ürün detay ---------- */
+const KIND={giris:"Giriş",cikis:"Çıkış",sayim:"Sayım"};
+async function showItem(id,keep){
+  cur=items.find(i=>i.id===id);if(!cur)return;
+  $("iName").textContent=cur.name;
+  $("iMeta").textContent=[cur.code,cur.brand,cur.min_qty?("Kritik: "+fmt(cur.min_qty)+" "+(cur.unit||"")):""].filter(Boolean).join(" · ")||" ";
+  $("iQty").textContent=fmt(cur.qty);$("iUnit").textContent=cur.unit||"adet";
+  $("iBig").classList.toggle("low",isLow(cur)||isZero(cur));
+  $("moveBox").classList.toggle("hide",!(can("in")||can("out")));
+  $("bIn").classList.toggle("hide",!can("in"));$("bOut").classList.toggle("hide",!can("out"));
+  $("bEdit").classList.toggle("hide",!can("count"));$("bEdit").textContent=can("add")?"Düzenle":"Sayım (miktarı düzelt)";
+  if(!keep){$("mAmt").value=1;$("mNote").value="";open("shItem")}
+  $("iLog").innerHTML=`<h3>Son hareketler</h3><div class="small">Yükleniyor…</div>`;
+  const {data}=await sb.from("moves").select("delta,after_qty,kind,note,user_id,created_at").eq("item_id",id).order("created_at",{ascending:false}).limit(30);
+  if(!cur||cur.id!==id)return;
+  $("iLog").innerHTML=(data&&data.length)?`<h3>Son hareketler</h3>`+data.map(l=>`<div class="lg"><div><span class="${l.delta>=0?"p":"m"}">${l.delta>0?"+":""}${fmt(l.delta)}</span> ${KIND[l.kind]||""}${l.note?" · "+esc(l.note):""}<div class="d">${new Date(l.created_at).toLocaleString("tr-TR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"})}${people[l.user_id]?" · "+esc(people[l.user_id].full_name||people[l.user_id].username):""}</div></div><div>${fmt(l.after_qty)}</div></div>`).join(""):"";
+}
+$("mDec").onclick=()=>{$("mAmt").value=Math.max(0,(Number($("mAmt").value)||0)-1)};
+$("mInc").onclick=()=>{$("mAmt").value=(Number($("mAmt").value)||0)+1};
+async function move(kind,amount,note){
+  if(busy||!cur)return false;busy=true;
+  try{
+    const {data,error}=await sb.rpc("stock_move",{p_item:cur.id,p_kind:kind,p_amount:amount,p_note:note||null});
+    if(error)throw error;
+    const it=items.find(i=>i.id===cur.id);if(it){it.qty=Number(data);it.last_move=new Date().toISOString()}
+    render();showItem(cur.id,true);
+    toast(Number(data)<0?"Dikkat: stok eksiye düştü ("+fmt(data)+")":kind==="sayim"?"Sayım kaydedildi":(kind==="giris"?"Giriş: +":"Çıkış: −")+fmt(amount)+" "+(cur.unit||""));
+    return true;
+  }catch(e){toast("Kaydedilemedi: "+errTr(e.message));return false}
+  finally{busy=false}
+}
+$("bIn").onclick=()=>{const a=Number($("mAmt").value);if(!(a>0))return toast("Miktar gir");move("giris",a,$("mNote").value.trim())};
+$("bOut").onclick=()=>{const a=Number($("mAmt").value);if(!(a>0))return toast("Miktar gir");move("cikis",a,$("mNote").value.trim())};
+
+/* ---------- Ürün formu ---------- */
+function showForm(item){
+  editing=item||null;const full=can("add");
+  $("fTitle").textContent=item?(full?"Ürünü düzenle":"Sayım: "+item.name):"Yeni ürün";
+  $("fName").value=item?.name||"";$("fCode").value=item?.code||"";$("fBrand").value=item?.brand||"";
+  $("fUnit").value=item?.unit||"adet";$("fQty").value=item?(item.qty??0):0;$("fMin").value=item?(item.min_qty??0):0;$("fPas").checked=!!item?.passive;
+  ["fName","fCode","fBrand","fUnit","fMin","fPas"].forEach(x=>$(x).disabled=!full);
+  $("fQtyL").textContent=item?"Sayılan miktar":"Mevcut miktar";
+  $("fDel").classList.toggle("hide",!(item&&full));$("delBox").classList.add("hide");
+  open("shForm");
+}
+$("fab").onclick=()=>showForm(null);
+$("bEdit").onclick=()=>showForm(cur);
+$("fSave").onclick=async()=>{
+  if(busy)return;const full=can("add");const qty=Number($("fQty").value)||0;
+  const name=$("fName").value.trim();if(!name)return toast("Ürün adı gerekli");
+  $("fSave").disabled=true;
+  try{
+    if(editing){
+      const id=editing.id;
+      if(full){
+        const patch={name,code:$("fCode").value.trim()||null,brand:$("fBrand").value.trim()||null,unit:$("fUnit").value,min_qty:Number($("fMin").value)||0,passive:$("fPas").checked};
+        const {error}=await sb.from("items").update(patch).eq("id",id);if(error)throw error;
+        Object.assign(items.find(i=>i.id===id)||{},patch);
+      }
+      if(Number(editing.qty)!==qty){cur=items.find(i=>i.id===id);await move("sayim",qty,"Sayım düzeltmesi")}
+      else toast("Güncellendi");
+    }else{
+      const {data,error}=await sb.from("items").insert({name,code:$("fCode").value.trim()||null,brand:$("fBrand").value.trim()||null,unit:$("fUnit").value,qty:0,min_qty:Number($("fMin").value)||0,passive:$("fPas").checked}).select().single();
+      if(error)throw error;
+      items.push(data);
+      if(qty){cur=data;await move("sayim",qty,"Açılış")}else toast("Eklendi");
+    }
+    render();open(null);
+  }catch(e){toast(/duplicate key/i.test(e.message)?"Bu stok kodu zaten var":"Kaydedilemedi: "+errTr(e.message))}
+  finally{$("fSave").disabled=false}
+};
+$("fDel").onclick=()=>$("delBox").classList.remove("hide");
+$("delNo").onclick=()=>$("delBox").classList.add("hide");
+$("delYes").onclick=async()=>{if(!editing)return;const {error}=await sb.from("items").delete().eq("id",editing.id);
+  if(error)return toast("Silinemedi: "+errTr(error.message));items=items.filter(i=>i.id!==editing.id);render();toast("Silindi");open(null)};
+
+/* ---------- Menü ---------- */
+$("menuBtn").onclick=async()=>{open("shMenu");if(can("team")){await loadPeople();renderTeam()}};
+$("reloadBtn").onclick=async()=>{open(null);await loadItems();toast("Liste yenilendi")};
+function renderTeam(){
+  const list=Object.values(people).filter(p=>p.id!==me.id);
+  if(!list.length){$("team").innerHTML=`<p class="small">Henüz başka kullanıcı yok.</p>`;return}
+  list.sort((a,b)=>(a.role==="bekliyor"?0:1)-(b.role==="bekliyor"?0:1)||(a.full_name||a.username).localeCompare(b.full_name||b.username,"tr"));
+  $("team").innerHTML=list.map(p=>`<div class="mrow"><div class="mn">${esc(p.full_name||p.username)}<small>@${esc(p.username)} · ${ROLES[p.role]||p.role}</small></div>
+    <select data-id="${esc(p.id)}">${["bekliyor","yonetici","depocu","satis","izleyici"].map(k=>`<option value="${k}" ${p.role===k?"selected":""}>${ROLES[k]}</option>`).join("")}</select></div>`).join("");
+  $("team").querySelectorAll("select").forEach(s=>s.onchange=async()=>{
+    const {error}=await sb.rpc("set_role",{p_user:s.dataset.id,p_role:s.value});
+    if(error){toast("Rol değişmedi: "+errTr(error.message));return}
+    people[s.dataset.id].role=s.value;toast("Rol güncellendi");renderTeam();
+  });
+}
+$("copyBtn").onclick=async()=>{
+  const low=items.filter(i=>!i.passive&&(isLow(i)||isZero(i)));
+  if(!low.length)return toast("Kritik ürün yok");
+  const txt="KRİTİK STOK ("+new Date().toLocaleDateString("tr-TR")+")\n"+low.map(i=>`- ${i.name}: ${fmt(i.qty)} ${i.unit||""}`).join("\n");
+  try{await navigator.clipboard.writeText(txt);toast("Kopyalandı")}catch(e){toast("Kopyalanamadı")}
+};
+
+/* ---------- Excel içe aktarma ---------- */
+const findCol=(row,keys)=>{const ks=Object.keys(row);for(const x of keys){const k=ks.find(k=>norm(k).includes(x));if(k!==undefined)return k}return null};
+const TRUE=["evet","e","1","true","x","var","pasif","yes"];
+const PASSIVE=["pasif","hayir","h","0","false","kullanim disi","kullanilmiyor","iptal","no"];
+const num=v=>{if(typeof v==="number")return v;v=String(v??"").trim();if(!v)return 0;if(v.includes(","))v=v.replace(/\./g,"").replace(",",".");return Number(v)||0};
+$("file").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(typeof XLSX==="undefined")return toast("Excel okuyucu yüklenemedi");
+  $("impBox").classList.remove("hide");$("impTxt").textContent="Dosya okunuyor…";$("impBar").style.width="0";
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+    if(!rows.length){$("impTxt").textContent="Dosyada satır yok.";return}
+    const r0=rows[0];
+    const cCode=findCol(r0,["stok kod","stok no","kod","code"]),cName=findCol(r0,["stok ad","urun ad","stok ismi","adi","name","aciklama"]),
+      cUnit=findCol(r0,["birim","unit"]),cQty=findCol(r0,["miktar","kalan","mevcut","bakiye"]),cBrand=findCol(r0,["marka","grup","brand"]),
+      cPas=findCol(r0,["pasif"]),cSt=cPas?null:findCol(r0,["durum","aktif","kullanim"]);
+    if(!cName){$("impTxt").textContent="'Stok Adı' sütunu bulunamadı. Başlıklar: "+Object.keys(r0).join(", ");return}
+    const noQty=$("noQty").checked,skipPas=$("skipPas").checked;
+    const isPas=r=>cPas?TRUE.includes(norm(String(r[cPas]).trim())):cSt?PASSIVE.includes(norm(String(r[cSt]).trim())):false;
+    let recs=rows.map(r=>{const o={name:String(r[cName]).trim().slice(0,200),code:cCode?String(r[cCode]).trim()||null:null,
+      unit:cUnit?(String(r[cUnit]).trim().toLocaleLowerCase("tr-TR")||"adet"):"adet",brand:cBrand?String(r[cBrand]).trim()||null:null,passive:isPas(r)};
+      if(!noQty)o.qty=cQty?num(r[cQty]):0;return o}).filter(r=>r.name);
+    const pasN=recs.filter(r=>r.passive).length;
+    if(skipPas)recs=recs.filter(r=>!r.passive);
+    const byCode=new Map();const noCode=[];
+    recs.forEach(r=>r.code?byCode.set(r.code,r):noCode.push(r));
+    const withCode=[...byCode.values()];
+    const note=`${cSt||cPas?`Durum sütunu "${cSt||cPas}": ${pasN} pasif ${skipPas?"atlandı":"pasif olarak alındı"}`:"Durum sütunu yok, hepsi aktif sayıldı"}${noQty?" · Miktarlar alınmadı":""}`;
+    const total=withCode.length+noCode.length;let done=0;
+    const step=async(batch,upsert)=>{
+      for(let t=0;t<3;t++){const q=upsert?sb.from("items").upsert(batch,{onConflict:"code"}):sb.from("items").insert(batch);
+        const {error}=await q;if(!error)return;if(t===2)throw error;await sleep(1500)}
+    };
+    for(let i=0;i<withCode.length;i+=500){await step(withCode.slice(i,i+500),true);done+=Math.min(500,withCode.length-i);
+      $("impBar").style.width=(done/total*100)+"%";$("impTxt").textContent=`${note}\n${done}/${total} ürün işlendi`}
+    for(let i=0;i<noCode.length;i+=500){await step(noCode.slice(i,i+500),false);done+=Math.min(500,noCode.length-i);
+      $("impBar").style.width=(done/total*100)+"%";$("impTxt").textContent=`${note}\n${done}/${total} ürün işlendi`}
+    $("impTxt").textContent=`${note}\n✅ Bitti: ${total} ürün yüklendi`;
+    await loadItems();
+  }catch(x){$("impTxt").textContent+="\n❌ Hata: "+errTr(x.message||String(x))}
+  e.target.value="";
+};
+
+/* ---------- Açılış ---------- */
+(async()=>{
+  if(!window.supabase){document.body.innerHTML='<div class="gate"><h2>Bağlantı hatası</h2><p>İnternet bağlantını kontrol edip sayfayı yenile.</p></div>';return}
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  await boot();
+})();
+</script>
+</body>
+</html>
