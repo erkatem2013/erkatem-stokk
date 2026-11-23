@@ -209,9 +209,10 @@ html,body{overscroll-behavior-y:none}
   <div id="moveBox">
     <div class="amt"><button id="mDec">−</button><input id="mAmt" type="number" inputmode="decimal" value="1" min="0"><button id="mInc">+</button></div>
     <div class="two">
-      <div class="fld"><label>Müşteri (çıkışta)</label><input id="mCust" list="custList" placeholder="Cari adı yaz" autocomplete="off"></div>
+      <div class="fld"><label>Müşteri (çıkışta)</label><input id="mCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
       <div class="fld"><label>Birim fiyat ₺</label><input id="mPrice" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
     </div>
+    <div class="sug hide" id="mCustSug"></div>
     <datalist id="custList"></datalist>
     <div class="small" id="mLast" style="margin:-4px 0 8px"></div>
     <div class="fld"><input id="mNote" placeholder="Not (isteğe bağlı)" maxlength="120"></div>
@@ -330,7 +331,8 @@ html,body{overscroll-behavior-y:none}
   <div class="grab"></div>
   <h2 id="dTitle"></h2>
   <div class="meta" id="dMeta"></div>
-  <div class="fld"><label>Cari</label><input id="dCust" list="custList" placeholder="Cari adı yaz" autocomplete="off"></div>
+  <div class="fld"><label>Cari</label><input id="dCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
+  <div class="sug hide" id="dCustSug"></div>
   <div class="fld"><label>Ürün ekle</label><input id="dAdd" type="search" placeholder="Ürün ara ve dokunarak ekle…" autocomplete="off"></div>
   <div class="sug hide" id="dSug"></div>
   <div id="dLines"></div>
@@ -774,6 +776,25 @@ $("cFile").onchange=async e=>{
   }catch(x){out.textContent+="\n❌ Hata: "+errTr(x.message||String(x))}
   e.target.value="";
 };
+
+/* ---------- Cari önerileri ---------- */
+function custSuggest(inpId,boxId,onPick){
+  const inp=$(inpId),box=$(boxId);
+  const show=()=>{const q=norm(inp.value.trim());
+    if(q.length<2){box.classList.add("hide");return}
+    const words=q.split(/\s+/).filter(Boolean);
+    const r=customers.filter(c=>{const n=norm(c.name+" "+(c.code||""));return words.every(w=>n.includes(w))})
+      .sort((a,b)=>{const an=norm(a.name).startsWith(q)?0:1,bn=norm(b.name).startsWith(q)?0:1;return an-bn||a.name.localeCompare(b.name,"tr")}).slice(0,8);
+    box.innerHTML=r.length?r.map(c=>`<div data-cid="${esc(c.id)}">${esc(c.name)}${c.code?` <span class="small">· ${esc(c.code)}</span>`:""}</div>`).join(""):`<div class="small">Eşleşen cari yok${inpId==="mCust"?" (yeni cari olarak eklenecek)":""}</div>`;
+    box.classList.remove("hide")};
+  inp.addEventListener("input",show);inp.addEventListener("focus",show);
+  inp.addEventListener("blur",()=>setTimeout(()=>box.classList.add("hide"),200));
+  box.addEventListener("mousedown",e=>e.preventDefault());
+  box.addEventListener("click",e=>{const d=e.target.closest("[data-cid]");if(!d)return;const c=customers.find(x=>x.id===d.dataset.cid);if(!c)return;
+    inp.value=c.name;box.classList.add("hide");inp.dispatchEvent(new Event("input"));box.classList.add("hide");if(onPick)onPick(c)});
+}
+custSuggest("mCust","mCustSug");
+custSuggest("dCust","dCustSug");
 
 /* ---------- Teklif & Sipariş ---------- */
 const COMPANY={name:"erkatem endüstriyel temizlik malzemeleri",addr:"Mahmutbey Mah. İstoç 20. Ada No: 86-88 Bağcılar / İstanbul",tel:"0212 659 46 91 (WhatsApp)",gsm:"0543 508 22 17",fax:"0212 659 46 93",mail:"info@erkatem.com",web:"www.erkatem.com"};
