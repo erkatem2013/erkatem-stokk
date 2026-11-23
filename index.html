@@ -974,7 +974,7 @@ function renderDoc(){
     $("dSave").classList.toggle("hide",locked);
   $("dToOrder").classList.toggle("hide",!(k==="teklif"&&cdoc.id&&cdoc.status!=="siparis"));
   $("dDeliver").classList.toggle("hide",!(k==="siparis"&&cdoc.id&&!locked));
-  $("dDel").classList.toggle("hide",!(cdoc.id&&!locked));
+  $("dDel").classList.toggle("hide",!(cdoc.id&&(!locked||me.role==="patron")));
   ["dCust","dAdd","dNote"].forEach(x=>$(x).disabled=locked);
 }
 $("dLines").addEventListener("input",e=>{const inp=e.target.closest("[data-f]");if(!inp)return;const i=+inp.closest(".ln").dataset.i;const f=inp.dataset.f;
@@ -1011,8 +1011,11 @@ async function saveDoc(){
   }catch(e){toast("Kaydedilemedi: "+errTr(e.message));return false}
 }
 $("dSave").onclick=async()=>{$("dSave").disabled=true;await saveDoc();$("dSave").disabled=false};
-$("dDel").onclick=async()=>{if(!cdoc.id)return;if($("dDel").dataset.sure!=="1"){$("dDel").dataset.sure="1";$("dDel").textContent="Emin misin? Tekrar bas";setTimeout(()=>{$("dDel").dataset.sure="";$("dDel").textContent="Sil"},3000);return}
-  const {error}=await sb.from("docs").delete().eq("id",cdoc.id);if(error)return toast("Silinemedi: "+errTr(error.message));toast("Silindi");open("shDocs");loadDocs()};
+$("dDel").onclick=async()=>{if(!cdoc.id)return;const del=cdoc.status==="teslim";
+  if($("dDel").dataset.sure!=="1"){$("dDel").dataset.sure="1";$("dDel").textContent=del?"Silinecek ve stoğa geri eklenecek. Emin misin? Tekrar bas":"Emin misin? Tekrar bas";setTimeout(()=>{$("dDel").dataset.sure="";$("dDel").textContent="Sil"},4000);return}
+  if(del){const {data,error}=await sb.rpc("delete_doc",{p_doc:cdoc.id});if(error)return toast("Silinemedi: "+errTr(error.message));toast(data?`Silindi, ${data} kalem stoğa geri eklendi`:"Silindi");await loadItems()}
+  else{const {error}=await sb.from("docs").delete().eq("id",cdoc.id);if(error)return toast("Silinemedi: "+errTr(error.message));toast("Silindi")}
+  open("shDocs");loadDocs()};
 $("dToOrder").onclick=async()=>{if(!(await saveDoc()))return;
   try{const {data,error}=await sb.from("docs").insert({kind:"siparis",customer_id:cdoc.customer_id,note:cdoc.note,status:"bekliyor",source_id:cdoc.id}).select().single();if(error)throw error;
     const rows=dlines.map((l,i)=>({doc_id:data.id,item_id:l.item_id||null,name:l.name,unit:l.unit||null,qty:l.qty||0,price:l.price,vat:Number(l.vat||0),pos:i}));
