@@ -149,6 +149,7 @@ html,body{overscroll-behavior-y:none}
     <button class="chip on" data-f="all">Tümü</button>
     <button class="chip" data-f="low">Kritik</button>
     <button class="chip" data-f="zero">Stokta yok</button>
+    <button class="chip" data-f="diff">Wolvox farkı</button>
     <button class="chip" data-f="recent">Son hareket</button>
     <button class="chip" data-f="passive">Pasif</button>
   </div>
@@ -166,6 +167,7 @@ html,body{overscroll-behavior-y:none}
   <h2 id="iName"></h2>
   <div class="meta" id="iMeta"></div>
   <div class="big" id="iBig"><span class="v" id="iQty">0</span><span class="u" id="iUnit"></span></div>
+  <div class="small" id="iWol" style="text-align:center;margin:-6px 0 10px"></div>
   <div id="moveBox">
     <div class="amt"><button id="mDec">−</button><input id="mAmt" type="number" inputmode="decimal" value="1" min="0"><button id="mInc">+</button></div>
     <div class="fld"><input id="mNote" placeholder="Not (ör. Deniz Ambalaj siparişi)" maxlength="120"></div>
@@ -221,7 +223,7 @@ html,body{overscroll-behavior-y:none}
   <div id="impSec" class="hide">
     <div class="meta" style="margin-top:14px">📥 Excel'den toplu ürün yükle</div>
     <p class="small">Wolvox'tan aldığın stok listesini (.xlsx veya .csv) seç. "Stok Kodu", "Stok Adı", "Birim", "Miktar", "Durumu" sütunları otomatik tanınır. Aynı stok kodlu ürün güncellenir, yeniler eklenir.</p>
-    <label class="chk"><input type="checkbox" id="noQty" checked> Miktarları alma (sadece ürün listesi)</label>
+    <div class="fld"><label>Miktar sütunu ne olsun?</label><select id="qtyMode"><option value="wolvox" selected>Wolvox miktarı olarak al (sayılanla yan yana)</option><option value="none">Miktarları alma</option><option value="stock">Sayılan stok olarak al (eski miktarları ezer)</option></select></div>
     <label class="chk"><input type="checkbox" id="skipPas" checked> Pasif ürünleri alma</label>
     <label class="chk"><input type="checkbox" id="withPrice"> Fiyatları da al (satış / alış fiyatı sütunları)</label>
     <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin:8px 0;font-size:15px">
@@ -265,6 +267,7 @@ function status(h){$("status").innerHTML=h?`<div class="note">${h}</div>`:""}
 function view(v){["authView","waitView","mainView"].forEach(x=>$(x).classList.toggle("hide",x!==v))}
 const isLow=i=>(Number(i.min_qty)||0)>0&&(Number(i.qty)||0)<=(Number(i.min_qty)||0);
 const isZero=i=>(Number(i.qty)||0)<=0;
+const hasDiff=i=>i.wolvox_qty!=null&&Number(i.wolvox_qty)!==Number(i.qty||0);
 const errTr=m=>{m=m||"";
   if(/Invalid login/i.test(m))return "Kullanıcı adı veya şifre yanlış";
   if(/already registered|already exists/i.test(m))return "Bu kullanıcı adı alınmış";
@@ -330,7 +333,7 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,sell_price").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,sell_price,wolvox_qty,wolvox_at").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
     items=all;
@@ -352,13 +355,14 @@ function render(){
   let arr=items.filter(i=>filter==="passive"?i.passive:!i.passive).filter(i=>!q||norm(i.name+" "+(i.code||"")+" "+(i.brand||"")).includes(q));
   if(filter==="low")arr=arr.filter(isLow);
   if(filter==="zero")arr=arr.filter(isZero);
+  if(filter==="diff")arr=arr.filter(hasDiff);
   if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
   if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Menü → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
     <div class="info"><div class="nm">${esc(i.name)}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
     <div class="sub">${esc([i.code,i.brand,tl(i.sell_price)].filter(Boolean).join(" · ")||"—")}</div></div>
-    <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div></div></div>`).join("")+
+    <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div>${i.wolvox_qty!=null?`<div class="u" style="${hasDiff(i)?"color:#b45309;font-weight:700":""}">W: ${fmt(i.wolvox_qty)}</div>`:""}</div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
 }
 let lockY=0;
@@ -378,6 +382,7 @@ async function showItem(id,keep){
   $("iMeta").textContent=[cur.code,cur.brand,cur.sell_price!=null?"Satış: "+tl(cur.sell_price):"",can("price")&&costs[cur.id]!=null?"Alış: "+tl(costs[cur.id]):"",cur.min_qty?("Kritik: "+fmt(cur.min_qty)+" "+(cur.unit||"")):""].filter(Boolean).join(" · ")||" ";
   $("iQty").textContent=fmt(cur.qty);$("iUnit").textContent=cur.unit||"adet";
   $("iBig").classList.toggle("low",isLow(cur)||isZero(cur));
+  $("iWol").innerHTML=cur.wolvox_qty!=null?`Wolvox'ta: <b>${fmt(cur.wolvox_qty)} ${esc(cur.unit||"")}</b>${hasDiff(cur)?` · <span style="color:#b45309;font-weight:700">fark ${Number(cur.qty||0)-Number(cur.wolvox_qty)>0?"+":""}${fmt(Number(cur.qty||0)-Number(cur.wolvox_qty))}</span>`:" ✓"}${cur.wolvox_at?` · ${new Date(cur.wolvox_at).toLocaleDateString("tr-TR")}`:""}`:"";
   $("moveBox").classList.toggle("hide",!(can("in")||can("out")));
   $("bIn").classList.toggle("hide",!can("in"));$("bOut").classList.toggle("hide",!can("out"));
   $("bEdit").classList.toggle("hide",!can("count"));$("bEdit").textContent=can("add")?"Düzenle / sayım":"Sayım (miktarı düzelt)";
@@ -581,11 +586,13 @@ $("file").onchange=async e=>{
       cSell=findCol(r0,["satis fiyat","liste fiyat","fiyat 1"]),cBuy=findCol(r0,["alis fiyat","maliyet"]);
     const withPrice=$("withPrice").checked;
     if(!cName){$("impTxt").textContent="'Stok Adı' sütunu bulunamadı. Başlıklar: "+Object.keys(r0).join(", ");return}
-    const noQty=$("noQty").checked,skipPas=$("skipPas").checked;
+    const qtyMode=$("qtyMode").value,noQty=qtyMode!=="stock",skipPas=$("skipPas").checked;const nowIso=new Date().toISOString();
     const isPas=r=>cPas?TRUE.includes(norm(String(r[cPas]).trim())):cSt?PASSIVE.includes(norm(String(r[cSt]).trim())):false;
     let recs=rows.map(r=>{const o={name:String(r[cName]).trim().slice(0,200),code:cCode?String(r[cCode]).trim()||null:null,
-      unit:cUnit?(String(r[cUnit]).trim().toLocaleLowerCase("tr-TR")||"adet"):"adet",brand:cBrand?String(r[cBrand]).trim()||null:null,passive:isPas(r)};
-      if(!noQty)o.qty=cQty?num(r[cQty]):0;
+      unit:cUnit?(String(r[cUnit]).trim().toLocaleLowerCase("tr-TR")||"adet"):"adet",passive:isPas(r)};
+      if(cBrand)o.brand=String(r[cBrand]).trim()||null;
+      if(qtyMode==="stock")o.qty=cQty?num(r[cQty]):0;
+      if(qtyMode==="wolvox"&&cQty){o.wolvox_qty=num(r[cQty]);o.wolvox_at=nowIso}
       if(withPrice&&cSell)o.sell_price=num(r[cSell])||null;
       if(withPrice&&cBuy)Object.defineProperty(o,"_buy",{value:num(r[cBuy])||null,enumerable:false});
       return o}).filter(r=>r.name);
@@ -594,7 +601,7 @@ $("file").onchange=async e=>{
     const byCode=new Map();const noCode=[];
     recs.forEach(r=>r.code?byCode.set(r.code,r):noCode.push(r));
     const withCode=[...byCode.values()];
-    const note=`${cSt||cPas?`Durum sütunu "${cSt||cPas}": ${pasN} pasif ${skipPas?"atlandı":"pasif olarak alındı"}`:"Durum sütunu yok, hepsi aktif sayıldı"}${noQty?" · Miktarlar alınmadı":""}${withPrice?(cSell||cBuy?` · Fiyat sütunları: ${[cSell,cBuy].filter(Boolean).join(", ")}`:" · Fiyat sütunu bulunamadı"):""}`;
+    const note=`${cSt||cPas?`Durum sütunu "${cSt||cPas}": ${pasN} pasif ${skipPas?"atlandı":"pasif olarak alındı"}`:"Durum sütunu yok, hepsi aktif sayıldı"}${qtyMode==="none"?" · Miktarlar alınmadı":qtyMode==="wolvox"?(cQty?` · "${cQty}" Wolvox miktarı olarak alındı`:" · Miktar sütunu bulunamadı"):" · Miktarlar sayılan stok olarak alındı"}${withPrice?(cSell||cBuy?` · Fiyat sütunları: ${[cSell,cBuy].filter(Boolean).join(", ")}`:" · Fiyat sütunu bulunamadı"):""}`;
     const total=withCode.length+noCode.length;let done=0;
     const step=async(batch,upsert)=>{
       for(let t=0;t<3;t++){const q=(upsert?sb.from("items").upsert(batch,{onConflict:"code"}):sb.from("items").insert(batch)).select("id");
