@@ -112,6 +112,7 @@ html,body{overscroll-behavior-y:none}
 .xbtn{border:none;background:var(--k);color:var(--y);font-weight:800;font-size:15px;border-radius:999px;padding:9px 16px}
 .sm-k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.sm-k div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}.sm-k b{display:block;font-size:22px}.sm-k span{font-size:12px;color:var(--mut)}
 .sm-h{font-weight:800;margin:14px 0 6px}.sm-r{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}.sm-r .m{color:var(--mut);font-size:12.5px}
+input.sugg{color:#1f6feb;background:#eef5ff}
 .dl{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .dl .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}.dl .s{font-size:12.5px;color:var(--mut);margin-top:2px}
 .bdg{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
@@ -300,7 +301,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:15</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:25</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -309,7 +310,8 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div class="meta" id="pStat"></div>
   <input class="search" id="pq" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off" style="margin-bottom:8px">
   <div class="chips" style="margin:0 0 8px"><button class="chip on" data-pf="nosell">Satış fiyatı yok</button><button class="chip" data-pf="nobuy">Alış fiyatı yok</button><button class="chip" data-pf="all">Tümü</button></div>
-  <div class="two" style="align-items:center;margin-bottom:10px"><div class="small">Alış girince satışı otomatik doldur, kâr %:</div><input id="pMargin" type="number" inputmode="decimal" placeholder="ör. 25" style="font-size:16px;padding:9px;border:1.5px solid var(--line);border-radius:9px;max-width:110px"></div>
+  <div class="two" style="align-items:center;margin-bottom:10px"><div class="small">Kâr %: alışa göre satış fiyatı önerilir</div><input id="pMargin" type="number" inputmode="decimal" placeholder="ör. 25" style="font-size:16px;padding:9px;border:1.5px solid var(--line);border-radius:9px;max-width:110px"></div>
+  <button class="btn pri hide" id="pApply" style="margin:0 0 10px">💾 Önerilen fiyatları kaydet</button>
   <div id="pList"></div>
   <button class="btn sec hide" id="pMore">Daha fazla göster</button>
 </div>
@@ -723,7 +725,21 @@ $("nAdd").onclick=async()=>{
 /* ---------- Hızlı fiyat girişi ---------- */
 let pFilter="nosell",pShown=40;
 try{const m=localStorage.getItem("erkatem_margin");if(m)$("pMargin").value=m}catch(e){}
-$("pMargin").oninput=()=>{try{localStorage.setItem("erkatem_margin",$("pMargin").value)}catch(e){}};
+$("pMargin").oninput=()=>{try{localStorage.setItem("erkatem_margin",$("pMargin").value)}catch(e){};pSugg()};
+const suggFor=i=>{const m=Number($("pMargin").value),b=costs[i.id];return m>0&&b!=null&&b>0&&i.sell_price==null?Math.round(b*(1+m/100)*100)/100:null};
+function pSugg(){ // kâr % değişince satış kutularına öneri yaz
+  let n=0;document.querySelectorAll("#pList .prow").forEach(r=>{const it=items.find(i=>i.id===r.dataset.id);const inp=r.querySelector('[data-k="sell"]');if(!it||!inp)return;
+    const sg=it?suggFor(it):null;inp.dataset.sugg=sg??"";
+    if(sg!=null&&(inp.value===""||inp.dataset.auto==="1")){inp.value=sg;inp.dataset.auto="1";inp.classList.add("sugg");n++}
+    else if(sg==null&&inp.dataset.auto==="1"){inp.value="";inp.dataset.auto="";inp.classList.remove("sugg")}});
+  $("pApply").classList.toggle("hide",!n);$("pApply").textContent=`💾 Önerilen fiyatları kaydet (${n} ürün)`;$("pApply").dataset.sure="";
+}
+$("pApply").onclick=async()=>{const b=$("pApply");const rows=[...document.querySelectorAll('#pList [data-k="sell"][data-auto="1"]')];if(!rows.length)return;
+  if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent=`${rows.length} ürünün satış fiyatı kaydedilecek. Emin misin? Tekrar bas`;return}
+  b.disabled=true;let ok=0;
+  for(const inp of rows){const r=inp.closest(".prow"),st=r.querySelector(".st");const v=numOrNull(inp.value);if(v==null)continue;
+    try{await saveSell(r.dataset.id,v);inp.dataset.auto="";inp.classList.remove("sugg");st.textContent="✅";ok++}catch(e){st.textContent="❌"}}
+  b.disabled=false;toast(`${ok} ürünün satış fiyatı kaydedildi`);renderPrice()};
 $("priceBtn").onclick=()=>{pShown=40;open("shPrice");renderPrice()};
 
 $("pq").oninput=()=>{pShown=40;renderPrice()};
@@ -743,7 +759,9 @@ function renderPrice(){
     <div class="pi"><div class="pf"><label>Alış ₺ 🔒</label><input data-k="buy" type="number" inputmode="decimal" step="0.01" value="${costs[i.id]??""}"></div>
     <div class="pf"><label>Satış ₺</label><input data-k="sell" type="number" inputmode="decimal" step="0.01" value="${i.sell_price??""}"></div><div class="st"></div></div></div>`).join(""):`<div class="empty">Bu filtrede ürün yok 👍</div>`;
   $("pMore").classList.toggle("hide",arr.length<=pShown);
+  pSugg();
 }
+$("pList").addEventListener("input",e=>{const inp=e.target.closest('[data-k="sell"]');if(inp&&inp.dataset.auto==="1"){inp.dataset.auto="";inp.classList.remove("sugg")}});
 $("pList").addEventListener("change",async e=>{
   const inp=e.target.closest("input");if(!inp)return;
   const row=inp.closest(".prow"),id=row.dataset.id,st=row.querySelector(".st"),it=items.find(i=>i.id===id);if(!it)return;
@@ -753,7 +771,7 @@ $("pList").addEventListener("change",async e=>{
       const today=new Date().toISOString().slice(0,10);const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:v,last_buy_at:v==null?null:today,last_buy_unit:null,last_buy_supplier:null,updated_at:new Date().toISOString()});if(error)throw error;
       costs[id]=v;costMeta[id]={last_buy_at:v==null?null:today};
       const m=Number($("pMargin").value);const sellInp=row.querySelector('[data-k="sell"]');
-      if(v!=null&&m>0&&sellInp.value===""){
+      if(v!=null&&m>0&&(sellInp.value===""||sellInp.dataset.auto==="1")){sellInp.dataset.auto="";sellInp.classList.remove("sugg");
         const sp=Math.round(v*(1+m/100)*100)/100;sellInp.value=sp;
         await saveSell(id,sp);
       }
