@@ -26,6 +26,10 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 .who{font-size:12.5px;color:#bbb;margin-top:2px}.who b{color:var(--y)}
 .menu-btn{background:none;border:1px solid #444;color:#fff;border-radius:10px;padding:7px 11px;font-size:14px}
 .stats{display:flex;gap:8px;margin-top:10px}
+.pano{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px 0}
+.pt{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;position:relative}
+.pt b{display:block;font-size:24px;font-weight:900;line-height:1.1}.pt span{font-size:12.5px;color:var(--mut)}
+.pt.hot{border-color:var(--y);background:#fffbea}.pt.red b{color:var(--red)}.pt::after{content:"›";position:absolute;right:12px;top:10px;color:#bbb;font-size:20px}
 .stat{flex:1;background:#222;border-radius:10px;padding:8px 10px}
 .stat .n{font-size:20px;font-weight:800}.stat .l{font-size:11px;color:#bbb;text-transform:uppercase;letter-spacing:.5px}
 .stat.warn .n{color:#ff6b6b}
@@ -195,6 +199,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
     <div class="stat"><div class="n" id="sZero">–</div><div class="l">Stokta yok</div></div>
   </div>
 </header>
+<div class="pano hide" id="pano"></div>
 <div class="tools">
   <input class="search" id="q" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off">
   <div class="chips">
@@ -301,7 +306,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:50</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:55</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -495,6 +500,7 @@ async function boot(){
   $("notifBtn").classList.toggle("hide",!can("sum"));if(can("sum"))notifLabel();
   view("mainView");
   await loadItems();
+  loadPano();
   if(can("sum")&&new URLSearchParams(location.search).get("sum")){history.replaceState(null,"",location.pathname);$("sumBtn").click()}
   loadCustomers();
   if(can("people"))loadPeople();
@@ -553,7 +559,8 @@ function render(){
 }
 let lockY=0;
 function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
-function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste","shSum"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+let panoT=0;
+function open(id){if(!id&&me&&Date.now()-panoT>8000)setTimeout(loadPano,50);["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste","shSum"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip[data-f]").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));render()});
@@ -1139,6 +1146,32 @@ $("dImg").onclick=async()=>{
     imgReady=docImgFile();$("dImg").textContent="📤 Görsel hazır, paylaşmak için dokun";return}
   try{shareImg(docImgFile())}catch(e){toast("Görsel oluşturulamadı")}
 };
+
+/* ---------- Ana ekran panosu ---------- */
+async function loadPano(){
+  if(!me)return;panoT=Date.now();const T=[];const act=items.filter(i=>!i.passive);
+  const jobs=[];
+  if(can("pick"))jobs.push(sb.rpc("open_orders").then(r=>r.data||[]).catch(()=>[]));else jobs.push(Promise.resolve(null));
+  if(can("docs"))jobs.push(sb.from("docs").select("id",{count:"exact",head:true}).eq("kind","teklif").in("status",["taslak","gonderildi"]).then(r=>r.count||0).catch(()=>0));else jobs.push(Promise.resolve(null));
+  if(can("sum"))jobs.push(sb.rpc("daily_summary",{p_day:null}).then(r=>r.data).catch(()=>null));else jobs.push(Promise.resolve(null));
+  const [oo,tk,sm]=await Promise.all(jobs);
+  if(oo){const open=oo.length,np=oo.filter(o=>o.unpriced>0).length,mine=oo.filter(o=>o.mine).length;
+    T.push({k:"pick",n:open,l:"Hazırlanacak sipariş",hot:open>0});
+    if(can("docs"))T.push({k:"np",n:np,l:"Fiyat bekleyen sipariş",hot:np>0,red:np>0});
+    else T.push({k:"mine",n:mine,l:"Senin yazdığın liste"})}
+  const low=act.filter(isLow).length;T.push({k:"low",n:low,l:"Kritik stok",red:low>0});
+  if(sm){const c=sm.counts||{};T.push({k:"sum",n:c.cikis||0,l:`Bugün çıkış · ${c.giris||0} giriş · ${c.sayim||0} sayım`})}
+  else if(tk!=null)T.push({k:"tk",n:tk,l:"Açık teklif"});
+  else{const z=act.filter(isZero).length;T.push({k:"zero",n:z,l:"Stokta yok",red:z>0})}
+  if(tk!=null&&sm&&T.length<4)T.push({k:"tk",n:tk,l:"Açık teklif"});
+  $("pano").innerHTML=T.slice(0,4).map(t=>`<button class="pt${t.hot?" hot":""}${t.red?" red":""}" data-pk2="${t.k}"><b>${fmt(t.n)}</b><span>${esc(t.l)}</span></button>`).join("");
+  $("pano").classList.toggle("hide",!T.length);
+}
+$("pano").onclick=e=>{const b=e.target.closest("[data-pk2]");if(!b)return;const k=b.dataset.pk2;
+  if(k==="pick"||k==="mine")return $("pickBtn").click();
+  if(k==="np"||k==="tk"){dKind=k==="np"?"siparis":"teklif";open("shDocs");document.querySelectorAll("[data-dk]").forEach(x=>x.classList.toggle("on",x.dataset.dk===dKind));$("newDoc").textContent=dKind==="teklif"?"+ Yeni teklif":"+ Yeni sipariş";return loadDocs()}
+  if(k==="sum")return $("sumBtn").click();
+  const f=k==="low"?"low":"zero";const c=document.querySelector(`[data-f="${f}"]`);if(c){c.click();$("q").scrollIntoView({behavior:"smooth"})}};
 
 /* ---------- Bildirimler (web push) ---------- */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
