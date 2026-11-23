@@ -353,7 +353,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div class="tot" id="dTot"></div>
   <div class="fld"><label id="dNoteL">Not (belgede görünür)</label><input id="dNote" placeholder="ör. Fiyatlara nakliye dahildir."></div>
   <button class="btn pri" id="dSave">Kaydet</button>
-  <div class="two" id="dOut"><button class="btn sec" id="dPdf">🖨️ PDF / Yazdır</button><button class="btn sec" id="dWa">💬 WhatsApp</button></div>
+  <div id="dOut"><button class="btn pri" id="dImg">🖼️ WhatsApp'a görsel olarak gönder</button><div class="two"><button class="btn sec" id="dPdf">🖨️ PDF / Yazdır</button><button class="btn sec" id="dWa">💬 Yazı olarak gönder</button></div></div>
   <button class="btn sec hide" id="dToOrder">📦 Siparişe çevir</button>
   <button class="btn in hide" id="dDeliver" style="color:#fff">✅ Teslim edildi (stoktan düş)</button>
   <button class="btn del hide" id="dDel">Sil</button>
@@ -921,13 +921,15 @@ async function openBasic(id){
 }
 async function openDoc(d){
   if(BASIC()&&d&&d.id)return openBasic(d.id);
-  cdoc=d?{...d}:{kind:dKind,status:dKind==="teklif"?"taslak":"bekliyor"};dlines=[];
+  cdoc=d?{...d}:{kind:dKind,status:dKind==="teklif"?"taslak":"bekliyor"};dlines=[];imgReady=null;resetImgBtn();
+  if(can("cari")&&!Object.keys(cinfo).length)loadCinfo();
   if(d&&d.id){const {data}=await sb.from("doc_lines").select("*").eq("doc_id",d.id).order("pos");dlines=(data||[]).map(l=>({...l}))}
   $("dCust").value=d&&d.customer_id?((customers.find(c=>c.id===d.customer_id)||{}).name||""):"";
   $("dNote").value=d?.note||"";$("dAdd").value="";$("dSug").classList.add("hide");
   renderDoc();open("shDoc");
 }
 function renderTotals(){
+  if(imgReady){imgReady=null;resetImgBtn()}
   const sub=dlines.reduce((a,l)=>a+(l.qty||0)*(l.price||0),0);
   const vats={};dlines.forEach(l=>{const v=Number(l.vat||0);vats[v]=(vats[v]||0)+(l.qty||0)*(l.price||0)*v/100});
   const vt=Object.values(vats).reduce((a,b)=>a+b,0);
@@ -1025,6 +1027,71 @@ $("dWa").onclick=async()=>{if(!cdoc.id&&!(await saveDoc()))return;
   const c=findCust($("dCust").value);const sub=dlines.reduce((a,l)=>a+(l.qty||0)*(l.price||0),0);const vt=dlines.reduce((a,l)=>a+(l.qty||0)*(l.price||0)*(l.vat||0)/100,0);
   const txt=`*erkatem ${cdoc.kind==="teklif"?"Fiyat Teklifi":"Sipariş"} ${cdoc.no||""}*\n${c?"Sayın "+c.name+"\n":""}\n`+dlines.map((l,i)=>`${i+1}) ${l.name}\n   ${fmt(l.qty)} ${l.unit||""} x ${money(l.price)} ₺ = ${money((l.qty||0)*(l.price||0))} ₺`).join("\n")+`\n\nAra toplam: ${money(sub)} ₺\nKDV: ${money(vt)} ₺\n*Genel toplam: ${money(sub+vt)} ₺*\n(Fiyatlara KDV dahil değildir)\n\nerkatem · 0212 659 46 91`;
   location.href="https://wa.me/?text="+encodeURIComponent(txt)};
+
+/* ---------- Teklif/sipariş görseli (WhatsApp'a resim olarak) ---------- */
+let imgReady=null;
+function resetImgBtn(){const b=$("dImg");if(b)b.textContent="🖼️ WhatsApp'a görsel olarak gönder"}
+function docCanvas(){
+  const S=2,W=820,P=34,F="-apple-system,'Helvetica Neue',Arial,sans-serif";
+  const c=findCust($("dCust").value);const ci=c&&cinfo[c.id]||{};
+  const cv=document.createElement("canvas");const H0=900+dlines.length*90;cv.width=W*S;cv.height=H0*S;
+  const x=cv.getContext("2d");x.scale(S,S);x.fillStyle="#fff";x.fillRect(0,0,W,H0);x.textBaseline="alphabetic";
+  const font=(sz,b)=>x.font=`${b?"700 ":""}${sz}px ${F}`;
+  const T=(t,X,Y,al="left",col="#111")=>{x.fillStyle=col;x.textAlign=al;x.fillText(t,X,Y)};
+  const wrap=(t,maxW)=>{const ws=String(t||"").split(/\s+/);const out=[];let ln="";ws.forEach(w=>{const tt=ln?ln+" "+w:w;if(x.measureText(tt).width>maxW&&ln){out.push(ln);ln=w}else ln=tt});if(ln)out.push(ln);return out.length?out:[""]};
+  // başlık
+  font(46,1);x.lineWidth=2;x.strokeStyle="#111";x.textAlign="left";x.strokeText("erkatem",P,P+44);T("erkatem",P,P+44,"left","#FFC400");
+  font(12,1);T(COMPANY.name.toLocaleUpperCase("tr-TR"),W-P,P+10,"right");
+  font(12);[COMPANY.addr,"Tel: "+COMPANY.tel+" · GSM: "+COMPANY.gsm,COMPANY.mail+" · "+COMPANY.web].forEach((l,i)=>T(l,W-P,P+28+i*17,"right","#333"));
+  let y=P+86;x.fillStyle="#FFC400";x.fillRect(P,y,W-2*P,5);y+=36;
+  // belge başlığı + cari kutusu
+  font(26,1);T(cdoc.kind==="teklif"?"FİYAT TEKLİFİ":"SİPARİŞ FORMU",P,y);
+  font(14);T("No: ",P,y+28,"left","#333");font(14,1);T(cdoc.no||"—",P+28,y+28);
+  font(14);T("Tarih: "+new Date(cdoc.created_at||Date.now()).toLocaleDateString("tr-TR"),P,y+48,"left","#333");
+  const bx=W/2,bw=W-P-bx;font(13);const cl=[];if(ci.address)cl.push(...wrap(ci.address,bw-20));if(ci.city)cl.push(ci.city);if(ci.tax_office||ci.tax_no)cl.push("V.D.: "+(ci.tax_office||"")+" · No: "+(ci.tax_no||""));if(ci.phone)cl.push("Tel: "+ci.phone);
+  font(14,1);const cn=wrap("Sayın "+(c?c.name:""),bw-20);const bh=16+cn.length*19+cl.length*18;
+  x.strokeStyle="#999";x.lineWidth=1;x.strokeRect(bx,y-22,bw,bh);cn.forEach((l,i)=>T(l,bx+10,y-22+24+i*19));font(13);cl.forEach((l,i)=>T(l,bx+10,y-22+24+cn.length*19+i*18,"left","#333"));
+  y=Math.max(y+70,y-22+bh+22);
+  // tablo
+  const C={n:P+8,u:P+40,q:W-P-300,p:W-P-175,v:W-P-112,t:W-P-8};const nw=C.q-C.u-100;
+  x.fillStyle="#111";x.fillRect(P,y,W-2*P,32);font(13,1);const hy=y+21;
+  T("#",C.n,hy,"left","#FFC400");T("Ürün",C.u,hy,"left","#FFC400");T("Miktar",C.q,hy,"right","#FFC400");T("Birim Fiyat",C.p,hy,"right","#FFC400");T("KDV",C.v,hy,"right","#FFC400");T("Tutar",C.t,hy,"right","#FFC400");
+  y+=32;
+  dlines.forEach((l,i)=>{font(14);const nl=wrap(l.name,nw);const rh=Math.max(34,14+nl.length*19);
+    if(i%2){x.fillStyle="#f6f6f6";x.fillRect(P,y,W-2*P,rh)}
+    const by=y+23;T(String(i+1),C.n,by,"left","#555");nl.forEach((t,k)=>T(t,C.u,by+k*19));
+    T(fmt(l.qty)+" "+(l.unit||""),C.q,by,"right");T(l.price==null?"—":money(l.price)+" ₺",C.p,by,"right");T("%"+Number(l.vat||0),C.v,by,"right","#555");
+    font(14,1);T(l.price==null?"—":money((l.qty||0)*(l.price||0))+" ₺",C.t,by,"right");
+    y+=rh;x.fillStyle="#ddd";x.fillRect(P,y-1,W-2*P,1)});
+  // toplamlar
+  const sub=dlines.reduce((a,l)=>a+(l.qty||0)*(l.price||0),0);const vats={};dlines.forEach(l=>{const v=Number(l.vat||0);vats[v]=(vats[v]||0)+(l.qty||0)*(l.price||0)*v/100});const vt=Object.values(vats).reduce((a,b)=>a+b,0);
+  y+=28;const tx=W-P-330;font(15);T("Ara Toplam",tx,y);T(money(sub)+" ₺",W-P-8,y,"right");
+  Object.keys(vats).filter(v=>vats[v]).sort((a,b)=>b-a).forEach(v=>{y+=24;T("KDV %"+v,tx,y);T(money(vats[v])+" ₺",W-P-8,y,"right")});
+  y+=14;x.fillStyle="#111";x.fillRect(tx,y,W-P-tx,2);y+=28;font(19,1);T("Genel Toplam",tx,y);T(money(sub+vt)+" ₺",W-P-8,y,"right");
+  // notlar
+  y+=40;font(13);const notes=[];const nt=$("dNote").value.trim();if(nt)notes.push(...wrap("Not: "+nt,W-2*P));
+  notes.push("Fiyatlarımıza KDV dahil değildir."+(cdoc.kind==="teklif"?" Teklifimiz 7 gün geçerlidir.":""),"Bilgi ve sipariş için WhatsApp: "+COMPANY.tel.replace(" (WhatsApp)",""));
+  notes.forEach((l,i)=>T(l,P,y+i*19,"left","#333"));y+=notes.length*19+20;
+  const out=document.createElement("canvas");out.width=W*S;out.height=Math.ceil(y*S);const o=out.getContext("2d");o.fillStyle="#fff";o.fillRect(0,0,out.width,out.height);o.drawImage(cv,0,0);
+  return out;
+}
+function docImgFile(){
+  const url=docCanvas().toDataURL("image/png");const b=atob(url.split(",")[1]);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
+  const name=(cdoc.no||"erkatem")+".png";return new File([u],name,{type:"image/png"});
+}
+function shareImg(f){
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    navigator.share({files:[f]}).then(()=>{imgReady=null;resetImgBtn()}).catch(e=>{if(e&&e.name==="NotAllowedError"){imgReady=f;$("dImg").textContent="📤 Görsel hazır, paylaşmak için dokun"}});
+  }else{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();toast("Görsel indirildi")}
+}
+$("dImg").onclick=async()=>{
+  if(imgReady){const f=imgReady;imgReady=null;return shareImg(f)}
+  if(!dlines.length)return toast("En az bir ürün ekle");
+  if(!cdoc.id||(can("cari")&&!Object.keys(cinfo).length)){ // önce kaydet / cari bilgisi yükle, sonra ikinci dokunuşta paylaş
+    if(!cdoc.id&&!(await saveDoc()))return;if(can("cari")&&!Object.keys(cinfo).length)await loadCinfo();
+    imgReady=docImgFile();$("dImg").textContent="📤 Görsel hazır, paylaşmak için dokun";return}
+  try{shareImg(docImgFile())}catch(e){toast("Görsel oluşturulamadı")}
+};
 
 /* ---------- WhatsApp ayrıştırıcı ---------- */
 // erkatem WhatsApp sipariş ayrıştırıcı
