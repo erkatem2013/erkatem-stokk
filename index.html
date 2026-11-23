@@ -210,7 +210,7 @@ html,body{overscroll-behavior-y:none}
     <div class="amt"><button id="mDec">−</button><input id="mAmt" type="number" inputmode="decimal" value="1" min="0"><button id="mInc">+</button></div>
     <div class="two">
       <div class="fld"><label>Müşteri (çıkışta)</label><input id="mCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
-      <div class="fld"><label>Birim fiyat ₺</label><input id="mPrice" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+      <div class="fld" id="mPriceBox"><label>Birim fiyat ₺</label><input id="mPrice" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
     </div>
     <div class="sug hide" id="mCustSug"></div>
     <datalist id="custList"></datalist>
@@ -263,7 +263,7 @@ html,body{overscroll-behavior-y:none}
       <button class="btn pri" id="nAdd">Çalışanı ekle</button>
       <div class="small" id="nMsg" style="margin-top:6px"></div>
     </div>
-    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, fiyatlar, Excel yükle, giriş/çıkış, sayım, depocu hareketlerini görür<br><b>Depocu:</b> ürün ekle, isim düzelt, giriş, çıkış, sayım<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Erişim yok:</b> giriş yapsa da hiçbir şey göremez</div>
+    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, fiyatlar, Excel yükle, giriş/çıkış, sayım, depocu hareketlerini görür<br><b>Depocu:</b> ürün ekle, isim düzelt, giriş, çıkış, sayım (fiyat göremez)<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Erişim yok:</b> giriş yapsa da hiçbir şey göremez</div>
     <p class="small">Çalışanı ekledikten sonra ona site linkini, kullanıcı adını ve şifresini ilet. En fazla 10 çalışan eklenebilir.</p>
   </div>
   <div id="impSec" class="hide">
@@ -360,7 +360,7 @@ const EMAIL_DOMAIN="erkatem.com";
 const $=id=>document.getElementById(id);
 let sortMode="pop";try{sortMode=localStorage.getItem("erkatem_sort")||"pop"}catch(e){}
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
-const PERM={docs:["patron","yonetici"],pick:["patron","yonetici","depocu"],cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
+const PERM={seeprice:["patron","yonetici","satis"],docs:["patron","yonetici"],pick:["patron","yonetici","depocu"],cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
 let costs={};let costMeta={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
 const can=a=>!!me&&PERM[a].includes(me.role);
 const tl=n=>(n===null||n===undefined||n==="")?"":"₺"+Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -443,10 +443,12 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,sell_price,wolvox_qty,wolvox_at,pop_score,vat").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
     items=all;
+    if(can("seeprice")){const sm={};for(let from=0;;from+=1000){const {data,error}=await sb.from("item_sell").select("item_id,sell_price").range(from,from+999);if(error||!data)break;data.forEach(x=>sm[x.item_id]=x.sell_price);if(data.length<1000)break}
+      items.forEach(i=>i.sell_price=sm[i.id]??null)}
     costs={};
     if(can("price")){for(let from=0;;from+=1000){const {data,error}=await sb.from("item_costs").select("item_id,buy_price,last_buy_at,last_buy_unit,last_buy_supplier").range(from,from+999);if(error||!data)break;data.forEach(c=>{costs[c.item_id]=c.buy_price;costMeta[c.item_id]=c});if(data.length<1000)break}}
     render();
@@ -527,7 +529,8 @@ async function showItem(id,keep){
   $("iWol").innerHTML=cur.wolvox_qty!=null?`Wolvox'ta: <b>${fmt(cur.wolvox_qty)} ${esc(cur.unit||"")}</b>${hasDiff(cur)?` · <span style="color:#b45309;font-weight:700">fark ${Number(cur.qty||0)-Number(cur.wolvox_qty)>0?"+":""}${fmt(Number(cur.qty||0)-Number(cur.wolvox_qty))}</span>`:" ✓"}${cur.wolvox_at?` · ${new Date(cur.wolvox_at).toLocaleDateString("tr-TR")}`:""}`:"";
   $("moveBox").classList.toggle("hide",!(can("in")||can("out")));
   $("bIn").classList.toggle("hide",!can("in"));$("bOut").classList.toggle("hide",!can("out"));
-  $("bEdit").classList.toggle("hide",!can("count"));$("bEdit").textContent=can("add")?"Düzenle / sayım":"Sayım (miktarı düzelt)";
+  $("bEdit").classList.toggle("hide",!can("count"));
+  $("mPriceBox").classList.toggle("hide",!can("seeprice"));$("mLast").classList.toggle("hide",!can("seeprice"));$("iSales").classList.toggle("hide",!can("seeprice"));$("bEdit").textContent=can("add")?"Düzenle / sayım":"Sayım (miktarı düzelt)";
   if(!keep){$("mAmt").value=1;$("mNote").value="";$("mCust").value="";$("mPrice").value=cur.sell_price??"";$("mLast").textContent="";open("shItem")}
   loadSales(id);
   $("iLog").innerHTML=`<h3>Son hareketler</h3><div class="small">Yükleniyor…</div>`;
@@ -574,6 +577,7 @@ function showForm(item){
 }
 $("fab").onclick=()=>showForm(null);
 $("bEdit").onclick=()=>showForm(cur);
+async function saveSell(id,v){const {error}=await sb.from("item_sell").upsert({item_id:id,sell_price:v,updated_at:new Date().toISOString()});if(error)throw error;const it=items.find(i=>i.id===id);if(it)it.sell_price=v}
 const numOrNull=v=>{v=String(v).trim();if(v==="")return null;const n=Number(v.replace(",","."));return isFinite(n)?n:null};
 async function saveCost(id){
   if(!can("price"))return;
@@ -589,13 +593,14 @@ $("fSave").onclick=async()=>{
   try{
     const fields={name,code:$("fCode").value.trim()||null,brand:$("fBrand").value.trim()||null,unit:$("fUnit").value,min_qty:Number($("fMin").value)||0};
     if(mgr)fields.passive=$("fPas").checked;
-    if(pr)fields.sell_price=numOrNull($("fSell").value);
+    const sellVal=pr?numOrNull($("fSell").value):undefined;
     if(editing){
       const id=editing.id;
       if(full){
         const {error}=await sb.from("items").update(fields).eq("id",id);if(error)throw error;
         Object.assign(items.find(i=>i.id===id)||{},fields);
         await saveCost(id);
+        if(pr&&sellVal!==(editing.sell_price??null))await saveSell(id,sellVal);
       }
       if(Number(editing.qty)!==qty){cur=items.find(i=>i.id===id);await move("sayim",qty,"Sayım düzeltmesi")}
       else toast("Güncellendi");
@@ -604,6 +609,7 @@ $("fSave").onclick=async()=>{
       if(error)throw error;
       items.push(data);
       await saveCost(data.id);
+      if(pr&&sellVal!=null)await saveSell(data.id,sellVal);
       if(qty){cur=data;await move("sayim",qty,"Açılış")}else toast("Eklendi");
     }
     render();open(null);
@@ -698,10 +704,10 @@ $("pList").addEventListener("change",async e=>{
       const m=Number($("pMargin").value);const sellInp=row.querySelector('[data-k="sell"]');
       if(v!=null&&m>0&&sellInp.value===""){
         const sp=Math.round(v*(1+m/100)*100)/100;sellInp.value=sp;
-        const {error:se}=await sb.from("items").update({sell_price:sp}).eq("id",id);if(se)throw se;it.sell_price=sp;
+        await saveSell(id,sp);
       }
     }else{
-      const {error}=await sb.from("items").update({sell_price:v}).eq("id",id);if(error)throw error;it.sell_price=v;
+      await saveSell(id,v);
     }
     st.textContent="✅";
     const act=items.filter(i=>!i.passive);
@@ -969,7 +975,7 @@ $("file").onchange=async e=>{
       if(cBrand)o.brand=String(r[cBrand]).trim()||null;
       if(qtyMode==="stock")o.qty=cQty?num(r[cQty]):0;
       if(qtyMode==="wolvox"&&cQty){o.wolvox_qty=num(r[cQty]);o.wolvox_at=nowIso}
-      if(withPrice&&cSell)o.sell_price=num(r[cSell])||null;
+      if(withPrice&&cSell)Object.defineProperty(o,"_sell",{value:num(r[cSell])||null,enumerable:false});
       if(withPrice&&cBuy)Object.defineProperty(o,"_buy",{value:num(r[cBuy])||null,enumerable:false});
       return o}).filter(r=>r.name);
     const pasN=recs.filter(r=>r.passive).length;
@@ -986,6 +992,10 @@ $("file").onchange=async e=>{
           if(withPrice&&cBuy&&data&&data.length===batch.length){
             const cs=data.map((d,k)=>({item_id:d.id,buy_price:batch[k]._buy??null})).filter(c=>c.buy_price!==null);
             if(cs.length){const {error:ce}=await sb.from("item_costs").upsert(cs);if(ce)throw ce}
+          }
+          if(withPrice&&cSell&&data&&data.length===batch.length){
+            const ss=data.map((d,k)=>({item_id:d.id,sell_price:batch[k]._sell??null})).filter(c=>c.sell_price!==null);
+            if(ss.length){const {error:se}=await sb.from("item_sell").upsert(ss);if(se)throw se}
           }
           return}
         if(t===2)throw error;await sleep(1500)}
