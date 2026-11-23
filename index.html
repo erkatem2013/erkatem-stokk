@@ -95,6 +95,15 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 .tabs button.on{background:#fff;color:var(--k);box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .err{color:var(--red);font-size:14px;margin:6px 0;min-height:18px}
 .gate{padding:40px 22px;text-align:center}.gate .btn.sec{background:#fff;border:1.5px solid var(--line)}.gate p{color:var(--mut);line-height:1.5}
+.prow{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.prow .pn{font-weight:600;font-size:15px}.prow .pc{font-size:12px;color:var(--mut);margin:2px 0 8px}
+.prow .pi{display:flex;gap:8px;align-items:center}
+.prow input{width:100%;min-width:0;font-size:16px;padding:9px 10px;border:1.5px solid var(--line);border-radius:9px;outline:none}
+.prow input:focus{border-color:var(--y)}
+.prow .st{width:22px;text-align:center;font-size:15px}
+.prow label{font-size:11px;color:var(--mut);display:block;margin-bottom:2px}
+.prow .pf{flex:1;min-width:0}
+#shPrice{max-height:96vh}
 </style>
 </head>
 <body>
@@ -213,11 +222,22 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
     <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin:8px 0;font-size:15px">
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div>
+  <button class="btn pri hide" id="priceBtn" style="margin-top:14px">💰 Hızlı fiyat girişi</button>
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
 </div>
 
+<div class="sheet" id="shPrice">
+  <div class="grab"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><h2>💰 Hızlı fiyat girişi</h2><button class="chip" id="pClose">Kapat</button></div>
+  <div class="meta" id="pStat"></div>
+  <input class="search" id="pq" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off" style="margin-bottom:8px">
+  <div class="chips" style="margin:0 0 8px"><button class="chip on" data-pf="nosell">Satış fiyatı yok</button><button class="chip" data-pf="nobuy">Alış fiyatı yok</button><button class="chip" data-pf="all">Tümü</button></div>
+  <div class="two" style="align-items:center;margin-bottom:10px"><div class="small">Alış girince satışı otomatik doldur, kâr %:</div><input id="pMargin" type="number" inputmode="decimal" placeholder="ör. 25" style="font-size:16px;padding:9px;border:1.5px solid var(--line);border-radius:9px;max-width:110px"></div>
+  <div id="pList"></div>
+  <button class="btn sec hide" id="pMore">Daha fazla göster</button>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -294,6 +314,7 @@ async function boot(){
   $("fab").classList.toggle("hide",!can("add"));
   $("teamSec").classList.toggle("hide",!can("team"));
   $("impSec").classList.toggle("hide",!can("imp"));
+  $("priceBtn").classList.toggle("hide",!can("price"));
   view("mainView");
   await loadItems();
   if(can("people"))loadPeople();
@@ -335,7 +356,7 @@ function render(){
     <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div></div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
 }
-function open(id){["shItem","shForm","shMenu"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+function open(id){["shItem","shForm","shMenu","shPrice"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));render()});
 $("q").oninput=render;
@@ -480,6 +501,51 @@ $("nAdd").onclick=async()=>{
   }catch(e){$("nMsg").textContent="❌ "+e.message}
   finally{$("nAdd").disabled=false}
 };
+/* ---------- Hızlı fiyat girişi ---------- */
+let pFilter="nosell",pShown=40;
+try{const m=localStorage.getItem("erkatem_margin");if(m)$("pMargin").value=m}catch(e){}
+$("pMargin").oninput=()=>{try{localStorage.setItem("erkatem_margin",$("pMargin").value)}catch(e){}};
+$("priceBtn").onclick=()=>{pShown=40;open("shPrice");renderPrice()};
+$("pClose").onclick=()=>{open(null);render()};
+$("pq").oninput=()=>{pShown=40;renderPrice()};
+document.querySelectorAll("[data-pf]").forEach(c=>c.onclick=()=>{pFilter=c.dataset.pf;pShown=40;document.querySelectorAll("[data-pf]").forEach(x=>x.classList.toggle("on",x===c));renderPrice()});
+$("pMore").onclick=()=>{pShown+=40;renderPrice()};
+function renderPrice(){
+  const act=items.filter(i=>!i.passive);
+  const hasSell=act.filter(i=>i.sell_price!=null).length,hasBuy=act.filter(i=>costs[i.id]!=null).length;
+  $("pStat").textContent=`Satış fiyatı girilen: ${fmt(hasSell)} / ${fmt(act.length)} · Alış: ${fmt(hasBuy)} / ${fmt(act.length)}`;
+  const q=norm($("pq").value.trim());
+  let arr=act.filter(i=>!q||norm(i.name+" "+(i.code||"")+" "+(i.brand||"")).includes(q));
+  if(pFilter==="nosell")arr=arr.filter(i=>i.sell_price==null);
+  if(pFilter==="nobuy")arr=arr.filter(i=>costs[i.id]==null);
+  $("pList").innerHTML=arr.length?arr.slice(0,pShown).map(i=>`<div class="prow" data-id="${esc(i.id)}">
+    <div class="pn">${esc(i.name)}</div><div class="pc">${esc([i.code,i.brand,i.unit].filter(Boolean).join(" · "))}</div>
+    <div class="pi"><div class="pf"><label>Alış ₺ 🔒</label><input data-k="buy" type="number" inputmode="decimal" step="0.01" value="${costs[i.id]??""}"></div>
+    <div class="pf"><label>Satış ₺</label><input data-k="sell" type="number" inputmode="decimal" step="0.01" value="${i.sell_price??""}"></div><div class="st"></div></div></div>`).join(""):`<div class="empty">Bu filtrede ürün yok 👍</div>`;
+  $("pMore").classList.toggle("hide",arr.length<=pShown);
+}
+$("pList").addEventListener("change",async e=>{
+  const inp=e.target.closest("input");if(!inp)return;
+  const row=inp.closest(".prow"),id=row.dataset.id,st=row.querySelector(".st"),it=items.find(i=>i.id===id);if(!it)return;
+  const v=numOrNull(inp.value);st.textContent="…";
+  try{
+    if(inp.dataset.k==="buy"){
+      const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:v,updated_at:new Date().toISOString()});if(error)throw error;
+      costs[id]=v;
+      const m=Number($("pMargin").value);const sellInp=row.querySelector('[data-k="sell"]');
+      if(v!=null&&m>0&&sellInp.value===""){
+        const sp=Math.round(v*(1+m/100)*100)/100;sellInp.value=sp;
+        const {error:se}=await sb.from("items").update({sell_price:sp}).eq("id",id);if(se)throw se;it.sell_price=sp;
+      }
+    }else{
+      const {error}=await sb.from("items").update({sell_price:v}).eq("id",id);if(error)throw error;it.sell_price=v;
+    }
+    st.textContent="✅";
+    const act=items.filter(i=>!i.passive);
+    $("pStat").textContent=`Satış fiyatı girilen: ${fmt(act.filter(i=>i.sell_price!=null).length)} / ${fmt(act.length)} · Alış: ${fmt(act.filter(i=>costs[i.id]!=null).length)} / ${fmt(act.length)}`;
+  }catch(err){st.textContent="❌";toast("Kaydedilemedi: "+errTr(err.message))}
+});
+
 $("copyBtn").onclick=async()=>{
   const low=items.filter(i=>!i.passive&&(isLow(i)||isZero(i)));
   if(!low.length)return toast("Kritik ürün yok");
