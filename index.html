@@ -105,8 +105,10 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 .prow .pf{flex:1;min-width:0}
 #shPrice{max-height:96vh}
 html,body{overscroll-behavior-y:none}
-.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-body.lock{position:fixed;left:0;right:0;overflow:hidden}
+.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;max-height:82vh!important;padding-top:0!important}
+.sbar{position:sticky;top:0;z-index:2;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:10px 0 8px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.sbar .grab{margin:0}
+.xbtn{border:none;background:var(--k);color:var(--y);font-weight:800;font-size:15px;border-radius:999px;padding:9px 16px}
 </style>
 </head>
 <body>
@@ -160,7 +162,7 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 
 <!-- Ürün detay -->
 <div class="sheet" id="shItem">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="iName"></h2>
   <div class="meta" id="iMeta"></div>
   <div class="big" id="iBig"><span class="v" id="iQty">0</span><span class="u" id="iUnit"></span></div>
@@ -175,7 +177,7 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 
 <!-- Ürün formu -->
 <div class="sheet" id="shForm">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="fTitle">Yeni ürün</h2>
   <div class="fld"><label>Ürün adı *</label><input id="fName" placeholder="ör. Mare 48'li kağıt havlu"></div>
   <div class="two">
@@ -199,7 +201,7 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 
 <!-- Menü -->
 <div class="sheet" id="shMenu">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2>Menü</h2>
   <div id="teamSec" class="hide">
     <div class="meta" style="margin-top:6px">👥 Ekip ve roller · <b id="teamCount">0/10</b></div>
@@ -232,8 +234,8 @@ body.lock{position:fixed;left:0;right:0;overflow:hidden}
 </div>
 
 <div class="sheet" id="shPrice">
-  <div class="grab"></div>
-  <div style="display:flex;justify-content:space-between;align-items:center"><h2>💰 Hızlı fiyat girişi</h2><button class="chip" id="pClose">Kapat</button></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
+  <h2>💰 Hızlı fiyat girişi</h2>
   <div class="meta" id="pStat"></div>
   <input class="search" id="pq" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off" style="margin-bottom:8px">
   <div class="chips" style="margin:0 0 8px"><button class="chip on" data-pf="nosell">Satış fiyatı yok</button><button class="chip" data-pf="nobuy">Alış fiyatı yok</button><button class="chip" data-pf="all">Tümü</button></div>
@@ -361,8 +363,9 @@ function render(){
 }
 let lockY=0;
 function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
-function open(id){["shItem","shForm","shMenu","shPrice"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);lockBody(!!id);if(!id){cur=null;editing=null}}
+function open(id){["shItem","shForm","shMenu","shPrice"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));render()});
 $("q").oninput=render;
 $("list").onclick=e=>{const r=e.target.closest(".row");if(r)showItem(r.dataset.id)};
@@ -511,7 +514,7 @@ let pFilter="nosell",pShown=40;
 try{const m=localStorage.getItem("erkatem_margin");if(m)$("pMargin").value=m}catch(e){}
 $("pMargin").oninput=()=>{try{localStorage.setItem("erkatem_margin",$("pMargin").value)}catch(e){}};
 $("priceBtn").onclick=()=>{pShown=40;open("shPrice");renderPrice()};
-$("pClose").onclick=()=>{open(null);render()};
+
 $("pq").oninput=()=>{pShown=40;renderPrice()};
 document.querySelectorAll("[data-pf]").forEach(c=>c.onclick=()=>{pFilter=c.dataset.pf;pShown=40;document.querySelectorAll("[data-pf]").forEach(x=>x.classList.toggle("on",x===c));renderPrice()});
 $("pMore").onclick=()=>{pShown+=40;renderPrice()};
