@@ -301,7 +301,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:35</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:40</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -1209,8 +1209,8 @@ $("sumWa").onclick=()=>{if(sumData)location.href="https://wa.me/?text="+encodeUR
 const M = (() => {
   const trn = s => (s||"").toString().toLocaleLowerCase("tr-TR").replace(/ı/g,"i").normalize("NFD").replace(/[̀-ͯ]/g,"");
   const UNIT = {koli:"koli",kli:"koli",kl:"koli",kol:"koli",adet:"adet",ad:"adet",adt:"adet",tane:"adet",paket:"paket",pkt:"paket",pk:"paket",pak:"paket",torba:"torba",bidon:"bidon",kutu:"kutu",kg:"kg",lt:"lt",litre:"lt",rulo:"rulo",duzine:"duzine",dz:"duzine",cift:"cift",kova:"kova",takim:"takim",top:"top"};
-  const ALIAS = {acaor:"accord",akord:"accord",acord:"accord",akkord:"accord",video:"viper",vayper:"viper",fresmaker:"freshmaker",freshmeker:"freshmaker",fresmeker:"freshmaker",buyukboy:"buyuk",kucukboy:"kucuk",tem:"temizleme",temiz:"temizleme",end:"endustriyel",parlatici:"parlatici",pudrasiz:"pudrasiz",makina:"makine",mak:"makine",sv:"sivi",bul:"bulasik",cam:"camasir",camsuyu:"camasir"};
-  const STOP = new Set("ve veya varsa bakilacak iyi ucuz olan icin den dan li lik lu luk lı lık lü lük ile bir bu su o da de bize lazim gonder lutfen abi kardes adet koli paket".split(" "));
+  const ALIAS = {acaor:"accord",akord:"accord",acord:"accord",akkord:"accord",video:"viper",vayper:"viper",fresmaker:"freshmaker",freshmeker:"freshmaker",fresmeker:"freshmaker",buyukboy:"buyuk",kucukboy:"kucuk",tem:"temizleme",temiz:"temizleme",end:"endustriyel",parlatici:"parlatici",pudrasiz:"pudrasiz",cekpas:"yersil",cekpaz:"yersil",cekpaslar:"yersil",makina:"makine",mak:"makine",sv:"sivi",bul:"bulasik",cam:"camasir",camsuyu:"camasir"};
+  const STOP = new Set("ve veya varsa olursa bakilacak iyi ucuz olan icin den dan li lik lu luk lı lık lü lük ile bir bu su o da de bize lazim gonder lutfen abi kardes adet koli paket tane bisey birsey olsun fazla fazlada pahali olmasin istiyorum gerek acil ilave ekle cok az".split(" "));
   const tok = s => {
     s = trn(s).replace(/(\d),(\d)/g,"$1.$2").replace(/[*x×](?=\s*\d)/g," x ").replace(/[^a-z0-9. ]+/g," ").replace(/(\d)\.(\d)/g,"$1\u00a7$2").replace(/\./g," ").replace(/\u00a7/g,".");
     s = s.replace(/(\d)([a-z])/g,"$1 $2").replace(/([a-z])(\d)/g,"$1 $2");
@@ -1267,21 +1267,27 @@ const M = (() => {
     }
     const cov = max?tot/max:0;
     const h = hist && hist[entry.it.id] ? 1.2+Math.log1p(hist[entry.it.id])*.4 : 0;
-    return cov*10 + Math.log1p(entry.it.pop_score||0)*.25 + h + (cov>0? -entry.toks.length*.03:0);
+    const iu = (entry.it.unit||"").toString().toLocaleLowerCase("tr-TR");
+    const ub = unitWant && iu ? (iu===unitWant ? .8 : -.3) : 0;
+    return cov*10 + Math.log1p(entry.it.pop_score||0)*.25 + h + ub + (cov>0? -entry.toks.length*.03:0);
   }
+  let unitWant = null;
   function match(line, ctx={}){
     const raw = stripPrefix(line);
     if(!raw || raw.length<2) return null;
     if(/^(<|‎)?(<?(resim|görüntü|image|photo|foto)|.*\.(jpg|png|jpeg|pdf)\b)/i.test(raw)) return null;
     const {qty,unit,rest} = parseQty(raw);
-    const q = expand(rest, ctx);
+    const q = expand(rest, ctx); unitWant = unit && unit!=="adet" ? unit : null;
     if(!q.length) return {raw, qty, unit, cands:[], conf:0};
     const scored = index.map(e=>({e,s:score(e,q,ctx.hist)})).filter(x=>x.s>3).sort((a,b)=>b.s-a.s).slice(0,4);
     const top=scored[0], second=scored[1];
     const conf = !top?0 : top.s>=8.5&&(!second||top.s-second.s>.8)?2 : top.s>=6.5?1 : 0;
     return {raw, qty, unit, q, cands:scored.map(x=>({item:x.e.it,score:+x.s.toFixed(2)})), conf};
   }
-  function parse(text, ctx){ return text.split(/\r?\n/).map(l=>match(l,ctx)).filter(x=>x); }
+  function parse(text, ctx){
+    // WhatsApp çoklu kopyalama: satır ayırıcı \r, \u2028 olabilir; tarih damgası satır ortasında da olabilir
+    text = String(text||"").replace(/\r\n?|[\u2028\u2029\u0085]/g,"\n").replace(/\s*(\u200e?\[\d{1,2}[./]\d{1,2}[./]\d{2,4}[ ,]+\d{1,2}:\d{2})/g,"\n$1");
+    return text.split("\n").map(l=>match(l.trim(),ctx)).filter(x=>x); }
   return {build, parse, match, tok, trn};
 })();
 
