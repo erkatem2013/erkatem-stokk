@@ -150,6 +150,13 @@ html,body{overscroll-behavior-y:none}
 .medit .g{display:flex;gap:6px}.medit .g>div{flex:1;min-width:0}
 .medit label{display:block;font-size:11px;color:var(--mut)}
 .medit input{width:100%;font-size:16px;padding:8px;border:1.5px solid var(--line);border-radius:9px}
+.pr{border:1.5px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px;background:#fff}
+.pr.c2{border-color:#86efac;background:#f0fdf4}.pr.c1{border-color:#fcd34d;background:#fffbeb}.pr.c0{border-color:#fca5a5;background:#fef2f2}
+.pr .raw{font-size:12.5px;color:var(--mut);margin-bottom:6px}
+.pr .row2{display:flex;gap:6px;align-items:center}
+.pr select,.pr input{font-size:15px;padding:8px;border:1.5px solid var(--line);border-radius:9px;background:#fff;min-width:0}
+.pr select{flex:1}.pr .q{width:70px;flex:none}
+textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit}
 </style>
 </head>
 <body>
@@ -331,6 +338,7 @@ html,body{overscroll-behavior-y:none}
   <h2>📄 Teklif & Sipariş</h2>
   <div class="chips" style="margin:6px 0 10px"><button class="chip on" data-dk="teklif">Teklifler</button><button class="chip" data-dk="siparis">Siparişler</button></div>
   <button class="btn pri" id="newDoc">+ Yeni teklif</button>
+  <button class="btn sec" id="pasteBtn">📋 WhatsApp mesajından oluştur</button>
   <div id="docList" style="margin-top:12px"></div>
 </div>
 <div class="sheet" id="shDoc">
@@ -362,6 +370,17 @@ html,body{overscroll-behavior-y:none}
   <input class="search" id="mvq" type="search" placeholder="Ürün, cari ya da kişi ara…" autocomplete="off" style="margin-bottom:8px">
   <div class="chips" style="margin:0 0 8px"><button class="chip on" data-mk="">Tümü</button><button class="chip" data-mk="giris">Giriş</button><button class="chip" data-mk="cikis">Çıkış</button><button class="chip" data-mk="sayim">Sayım</button></div>
   <div id="mvList"></div>
+</div>
+<div class="sheet" id="shPaste">
+  <div class="grab"></div>
+  <h2>📋 WhatsApp mesajından oluştur</h2>
+  <div class="meta">Müşterinin sipariş mesajını kopyala, buraya yapıştır. Ürünleri ben bulayım, sen kontrol et.</div>
+  <div class="fld"><label>Cari</label><input id="pCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
+  <div class="sug hide" id="pCustSug"></div>
+  <textarea class="paste" id="pText" placeholder="ör.&#10;1 KOLİ HAZNELİ FARAŞ&#10;3 KOLİ MİNİ ÇÖP POŞET&#10;3 pkt acord bez"></textarea>
+  <button class="btn pri" id="pParse">🔎 Ürünleri bul</button>
+  <div id="pRes" style="margin-top:12px"></div>
+  <div class="two hide" id="pMake"><button class="btn pri" data-mk2="siparis">📦 Sipariş oluştur</button><button class="btn sec" data-mk2="teklif">📄 Teklif oluştur</button></div>
 </div>
 <div id="printArea"></div>
 <div class="toast" id="toast"></div>
@@ -506,7 +525,7 @@ function render(){
 }
 let lockY=0;
 function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
-function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip[data-f]").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));render()});
@@ -982,6 +1001,137 @@ $("dWa").onclick=async()=>{if(!cdoc.id&&!(await saveDoc()))return;
   const c=findCust($("dCust").value);const sub=dlines.reduce((a,l)=>a+(l.qty||0)*(l.price||0),0);const vt=dlines.reduce((a,l)=>a+(l.qty||0)*(l.price||0)*(l.vat||0)/100,0);
   const txt=`*erkatem ${cdoc.kind==="teklif"?"Fiyat Teklifi":"Sipariş"} ${cdoc.no||""}*\n${c?"Sayın "+c.name+"\n":""}\n`+dlines.map((l,i)=>`${i+1}) ${l.name}\n   ${fmt(l.qty)} ${l.unit||""} x ${money(l.price)} ₺ = ${money((l.qty||0)*(l.price||0))} ₺`).join("\n")+`\n\nAra toplam: ${money(sub)} ₺\nKDV: ${money(vt)} ₺\n*Genel toplam: ${money(sub+vt)} ₺*\n(Fiyatlara KDV dahil değildir)\n\nerkatem · 0212 659 46 91`;
   location.href="https://wa.me/?text="+encodeURIComponent(txt)};
+
+/* ---------- WhatsApp ayrıştırıcı ---------- */
+// erkatem WhatsApp sipariş ayrıştırıcı
+const M = (() => {
+  const trn = s => (s||"").toString().toLocaleLowerCase("tr-TR").replace(/ı/g,"i").normalize("NFD").replace(/[̀-ͯ]/g,"");
+  const UNIT = {koli:"koli",kli:"koli",kl:"koli",kol:"koli",adet:"adet",ad:"adet",adt:"adet",tane:"adet",paket:"paket",pkt:"paket",pk:"paket",pak:"paket",torba:"torba",bidon:"bidon",kutu:"kutu",kg:"kg",lt:"lt",litre:"lt",rulo:"rulo",duzine:"duzine",dz:"duzine",cift:"cift",kova:"kova",takim:"takim",top:"top"};
+  const ALIAS = {acaor:"accord",akord:"accord",acord:"accord",akkord:"accord",video:"viper",vayper:"viper",fresmaker:"freshmaker",freshmeker:"freshmaker",fresmeker:"freshmaker",buyukboy:"buyuk",kucukboy:"kucuk",tem:"temizleme",temiz:"temizleme",end:"endustriyel",parlatici:"parlatici",pudrasiz:"pudrasiz",makina:"makine",mak:"makine",sv:"sivi",bul:"bulasik",cam:"camasir",camsuyu:"camasir"};
+  const STOP = new Set("ve veya varsa bakilacak iyi ucuz olan icin den dan li lik lu luk lı lık lü lük ile bir bu su o da de bize lazim gonder lutfen abi kardes adet koli paket".split(" "));
+  const tok = s => {
+    s = trn(s).replace(/(\d),(\d)/g,"$1.$2").replace(/[*x×](?=\s*\d)/g," x ").replace(/[^a-z0-9. ]+/g," ").replace(/(\d)\.(\d)/g,"$1\u00a7$2").replace(/\./g," ").replace(/\u00a7/g,".");
+    s = s.replace(/(\d)([a-z])/g,"$1 $2").replace(/([a-z])(\d)/g,"$1 $2");
+    return s.split(/\s+/).filter(Boolean);
+  };
+  const tri = w => { const g=new Set(), p=`  ${w} `; for(let i=0;i<p.length-2;i++) g.add(p.slice(i,i+3)); return g; };
+  const sim = (a,b) => { const A=tri(a),B=tri(b); let n=0; A.forEach(x=>{if(B.has(x))n++}); return n/(A.size+B.size-n); };
+  let index = [];
+  function build(items){
+    index = items.filter(i=>!i.passive).map(i=>{const t=tok(i.name+" "+(i.brand||""));return {it:i,toks:t,set:new Set(t),tris:t.filter(x=>x.length>=4&&!/^\d/.test(x))}});
+  }
+  function stripPrefix(line){
+    return line.replace(/^‎?\[?\d{1,2}[./]\d{1,2}[./]\d{2,4}[ ,]+\d{1,2}:\d{2}(:\d{2})?\]?\s*(-\s*)?[^:]{1,40}:\s*/,"").replace(/^[-•*\d]+[.)]\s+/,"").trim();
+  }
+  function parseQty(line){
+    const t = tok(line); let qty=null, unit=null, used=new Set();
+    for(let i=0;i<t.length;i++){
+      if(/^\d+(\.\d+)?$/.test(t[i])){
+        let j=i+1; if(t[j]&&/^(ar|er|sar|ser|ser|tane)$/.test(t[j])) j++;
+        if(t[j]&&UNIT[t[j]]){ qty=Number(t[i]); unit=UNIT[t[j]]; used.add(i); used.add(j); if(j>i+1)used.add(i+1); break; }
+      } else if(UNIT[t[i]] && qty===null && i===0 && t[1] && !/^\d/.test(t[1])) { /* "koli mini çöp" -> unit without qty */ unit=UNIT[t[i]]; used.add(i); }
+    }
+    if(qty===null){ // ilk sayı tek başına, ölçü değilse
+      for(let i=0;i<t.length;i++){ if(/^\d+$/.test(t[i]) && !(t[i+1]&&/^(li|lik|lu|luk|cm|mm|lt|gr|g|ml|cc|x|oz|kg|m|mt)$/.test(t[i+1])) && !(t[i-1]==="x") && !(t[i+1]==="x")){ qty=Number(t[i]); used.add(i); break; } }
+    }
+    const rest = [];
+    t.forEach((w,i)=>{ if(used.has(i)) return; if(/^(li|lik|lu|luk)$/.test(w)) return;
+      if(/^\d+(\.\d+)?$/.test(w) && t[i+1] && /^(li|lik|lu|luk)$/.test(t[i+1])) rest.push("~"+w); else rest.push(w); });
+    return {qty, unit, rest};
+  }
+  function expand(q, ctx){
+    let q2 = q.map(w=>ALIAS[w]||w);
+    const has = w => q2.includes(w);
+    if(has("cop")||has("poset")){
+      if(has("orta")) q2.push("!55","!60");
+      if(has("buyuk")) q2.push("!65","!80");
+      if(has("jumbo")) q2.push("!80","!110");
+    }
+    if(ctx && ctx.mare && ((has("kagit")&&has("havlu"))||has("tuvalet"))) q2.push("mare");
+    return q2.filter(w=>!STOP.has(w) && (w.length>=2 || /^\d+$/.test(w)));
+  }
+  function score(entry,q,hist){
+    let tot=0, max=0;
+    for(let w of q){
+      let wt;
+      if(w[0]==="~"){w=w.slice(1);wt=.35} else if(w[0]==="!"){w=w.slice(1);wt=2.2} else wt=/^\d/.test(w)?1.2:(w.length>=4?1.5:1);
+      const isNum=/^\d/.test(w); max+=wt;
+      if(entry.set.has(w)){tot+=wt;continue}
+      if(isNum) continue;
+      let best=0;
+      for(const p of entry.toks){ if(p.length>=3&&w.length>=3&&(p.startsWith(w)||w.startsWith(p))){best=Math.max(best,.8)} }
+      if(best<.8&&w.length>=4) for(const p of entry.tris){ const s=sim(w,p); if(s>.45) best=Math.max(best,s*.9) }
+      tot+=wt*best;
+    }
+    const cov = max?tot/max:0;
+    const h = hist && hist[entry.it.id] ? 1.2+Math.log1p(hist[entry.it.id])*.4 : 0;
+    return cov*10 + Math.log1p(entry.it.pop_score||0)*.25 + h + (cov>0? -entry.toks.length*.03:0);
+  }
+  function match(line, ctx={}){
+    const raw = stripPrefix(line);
+    if(!raw || raw.length<2) return null;
+    if(/^(<|‎)?(<?(resim|görüntü|image|photo|foto)|.*\.(jpg|png|jpeg|pdf)\b)/i.test(raw)) return null;
+    const {qty,unit,rest} = parseQty(raw);
+    const q = expand(rest, ctx);
+    if(!q.length) return {raw, qty, unit, cands:[], conf:0};
+    const scored = index.map(e=>({e,s:score(e,q,ctx.hist)})).filter(x=>x.s>3).sort((a,b)=>b.s-a.s).slice(0,4);
+    const top=scored[0], second=scored[1];
+    const conf = !top?0 : top.s>=8.5&&(!second||top.s-second.s>.8)?2 : top.s>=6.5?1 : 0;
+    return {raw, qty, unit, q, cands:scored.map(x=>({item:x.e.it,score:+x.s.toFixed(2)})), conf};
+  }
+  function parse(text, ctx){ return text.split(/\r?\n/).map(l=>match(l,ctx)).filter(x=>x); }
+  return {build, parse, match, tok, trn};
+})();
+
+
+let pRows=[];
+custSuggest("pCust","pCustSug");
+$("pasteBtn").onclick=()=>{open("shPaste");if(!$("pText").value)$("pRes").innerHTML="";};
+$("pParse").onclick=async()=>{
+  const txt=$("pText").value.trim();if(!txt)return toast("Mesajı yapıştır");
+  $("pParse").disabled=true;$("pRes").innerHTML=`<div class="small">Ürünler aranıyor…</div>`;
+  const c=findCust($("pCust").value);let hist={};
+  if(c){const {data}=await sb.from("customer_items").select("item_id,cnt").eq("customer_id",c.id).limit(2000);(data||[]).forEach(x=>hist[x.item_id]=x.cnt)}
+  M.build(items);
+  pRows=M.parse(txt,{hist,mare:!!(c&&norm(c.name).includes("deniz ambalaj"))}).map(r=>({...r,sel:r.cands[0]?r.cands[0].item.id:"",on:!!r.cands[0]&&r.conf>0,qty:r.qty||1}));
+  renderPaste();$("pParse").disabled=false;
+};
+function renderPaste(){
+  if(!pRows.length){$("pRes").innerHTML=`<div class="empty">Satır bulunamadı.</div>`;$("pMake").classList.add("hide");return}
+  const ok=pRows.filter(r=>r.on&&r.sel).length;
+  $("pRes").innerHTML=`<div class="small" style="margin-bottom:8px">🟢 emin · 🟡 kontrol et · 🔴 bulunamadı — ${ok}/${pRows.length} satır eklenecek</div>`+pRows.map((r,i)=>`<div class="pr c${r.sel?r.conf:0}" data-pi="${i}">
+    <div class="raw">“${esc(r.raw)}”${r.unit?` · <b>${esc(r.unit)}</b>`:""}</div>
+    <div class="row2"><input type="checkbox" data-on ${r.on?"checked":""} style="width:22px;height:22px;flex:none">
+      <input class="q" data-q type="number" inputmode="decimal" value="${r.qty}">
+      <select data-sel><option value="">— ürün seç —</option>${r.cands.map(c=>`<option value="${esc(c.item.id)}" ${c.item.id===r.sel?"selected":""}>${esc(c.item.name)} (${esc(c.item.unit||"")})</option>`).join("")}${r.sel&&!r.cands.some(c=>c.item.id===r.sel)?`<option value="${esc(r.sel)}" selected>${esc((items.find(i=>i.id===r.sel)||{}).name||"")}</option>`:""}</select></div>
+    <input data-find placeholder="🔍 Başka ürün ara…" style="width:100%;margin-top:6px" autocomplete="off"><div class="sug hide" data-fs></div></div>`).join("");
+  $("pMake").classList.remove("hide");
+}
+$("pRes").addEventListener("change",e=>{const row=e.target.closest("[data-pi]");if(!row)return;const r=pRows[+row.dataset.pi];
+  if(e.target.matches("[data-on]"))r.on=e.target.checked;
+  if(e.target.matches("[data-sel]")){r.sel=e.target.value;r.on=!!r.sel;if(r.sel)r.conf=Math.max(r.conf,2);renderPaste()}});
+$("pRes").addEventListener("input",e=>{const row=e.target.closest("[data-pi]");if(!row)return;const r=pRows[+row.dataset.pi];
+  if(e.target.matches("[data-q]"))r.qty=numOrNull(e.target.value)||0;
+  if(e.target.matches("[data-find]")){const q=norm(e.target.value.trim());const box=row.querySelector("[data-fs]");
+    if(q.length<2){box.classList.add("hide");return}
+    const words=q.split(/\s+/);const res=items.filter(i=>!i.passive&&words.every(w=>norm(i.name+" "+(i.code||"")).includes(w))).sort((a,b)=>(b.pop_score||0)-(a.pop_score||0)).slice(0,8);
+    box.innerHTML=res.length?res.map(i=>`<div data-pick="${esc(i.id)}">${esc(i.name)} <span class="small">· ${esc(i.unit||"")}</span></div>`).join(""):`<div class="small">Sonuç yok</div>`;box.classList.remove("hide")}});
+$("pRes").addEventListener("click",e=>{const d=e.target.closest("[data-pick]");if(!d)return;const row=d.closest("[data-pi]");const r=pRows[+row.dataset.pi];r.sel=d.dataset.pick;r.on=true;r.conf=2;renderPaste()});
+document.querySelectorAll("[data-mk2]").forEach(b=>b.onclick=async()=>{
+  const rows=pRows.filter(r=>r.on&&r.sel);if(!rows.length)return toast("Eklenecek ürün yok");
+  const c=findCust($("pCust").value);
+  b.disabled=true;
+  const lines=[];
+  for(const r of rows){const it=items.find(i=>i.id===r.sel);if(!it)continue;
+    let price=it.sell_price??null;if(c){const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}
+    lines.push({item_id:it.id,name:it.name,unit:it.unit,qty:r.qty||1,price,vat:Number(it.vat??20),pos:lines.length,picked:false})}
+  b.disabled=false;
+  dKind=b.dataset.mk2;document.querySelectorAll("[data-dk]").forEach(x=>x.classList.toggle("on",x.dataset.dk===dKind));$("newDoc").textContent=dKind==="teklif"?"+ Yeni teklif":"+ Yeni sipariş";
+  await openDoc(null);dlines=lines;$("dCust").value=c?c.name:"";
+  const skipped=pRows.filter(r=>!(r.on&&r.sel)).map(r=>r.raw);
+  if(skipped.length)$("dNote").value="";
+  renderDoc();toast(`${lines.length} kalem eklendi${skipped.length?`, ${skipped.length} satır atlandı`:""}. Kontrol edip Kaydet'e bas.`);
+});
 
 /* ---------- Depo: hazırlık ---------- */
 let pkDoc=null;
