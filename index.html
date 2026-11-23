@@ -165,6 +165,68 @@ input.sugg{color:#1f6feb;background:#eef5ff}
 .pr select,.pr input{font-size:15px;padding:8px;border:1.5px solid var(--line);border-radius:9px;background:#fff;min-width:0}
 .pr select{flex:1}.pr .q{width:70px;flex:none}
 textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit}
+/* ===== Yeni arayüz (23.11) ===== */
+:root{--bg:#f4f4f2;--line:#e7e7e3;--mut:#737373;--tb:64px}
+body{padding-bottom:calc(var(--tb) + 90px + env(safe-area-inset-bottom))}
+header{padding:calc(10px + env(safe-area-inset-top)) 16px 12px;border-bottom:4px solid var(--y)}
+.logo{display:flex;align-items:center;gap:10px}
+.lm{width:38px;height:38px;border-radius:10px;background:var(--y);color:var(--k);font-weight:900;font-size:24px;display:flex;align-items:center;justify-content:center;line-height:1}
+.brand h1{font-size:19px;letter-spacing:-.2px}
+.who{font-size:12px}
+.menu-btn{width:42px;height:42px;padding:0;font-size:20px;border-radius:12px;border-color:#333;background:#1c1c1c}
+.pano{padding:14px 14px 0;gap:10px}
+.pt{border:none;border-radius:16px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.pt b{font-size:26px}.pt span{font-size:12.5px;line-height:1.3;display:block;margin-top:2px}
+.pt.hot{background:var(--k);color:#fff}.pt.hot b{color:var(--y)}.pt.hot span{color:#ccc}.pt.hot::after{color:#666}
+.pt.red{box-shadow:inset 4px 0 0 var(--red),0 1px 3px rgba(0,0,0,.06)}
+.sec-h{font-size:13px;font-weight:800;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;padding:18px 16px 0}
+.tools{padding:8px 14px 4px;position:sticky;top:calc(68px + env(safe-area-inset-top));z-index:4;background:var(--bg)}
+.sbox{display:flex;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding-left:12px}
+.sbox:focus-within{border-color:var(--y);box-shadow:0 0 0 3px rgba(255,196,0,.18)}
+.sic{font-size:15px;opacity:.55}
+.sbox .search{border:none;background:none;padding:13px 10px;flex:1;min-width:0;box-shadow:none}
+.sortb{flex:none;border:none;background:var(--bg);border-radius:10px;margin-right:6px;padding:8px 10px;font-size:12.5px;font-weight:700;color:#444;white-space:nowrap}
+.chips{padding-bottom:4px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
+.chip{padding:7px 13px;font-size:13.5px;border-width:1px;font-weight:600;color:#444}
+.chip i{font-style:normal;font-weight:800;color:var(--red);margin-left:2px}
+.chip.on i{color:var(--y)}
+.list{padding:6px 14px}
+.row{border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.05);border:1px solid #efefec}
+.row:active{background:#fafaf7}
+.row .nm{font-size:15.5px}
+.row.low{box-shadow:inset 4px 0 0 var(--red),0 1px 2px rgba(0,0,0,.05)}
+.qty .v{font-size:21px}
+.qty .w{font-size:11px;color:#9a9a9a;margin-top:1px}.qty .w.df{color:#b45309;font-weight:700}
+.fab{bottom:calc(var(--tb) + 18px + env(safe-area-inset-bottom));width:58px;height:58px;font-size:32px;border-radius:18px}
+.toast{bottom:calc(var(--tb) + 90px + env(safe-area-inset-bottom))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;background:rgba(17,17,17,.97);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-top:1px solid #222}
+.tb{flex:1;border:none;background:none;color:#9a9a9a;font-size:11.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;border-radius:12px;position:relative}
+.tb span{font-size:21px;line-height:1.1;filter:grayscale(1);opacity:.75}
+.tb.on{color:var(--y)}.tb.on span{filter:none;opacity:1}
+.tb em{position:absolute;top:0;left:calc(50% + 6px);background:var(--red);color:#fff;font-style:normal;font-size:10.5px;font-weight:800;border-radius:999px;padding:1px 6px;min-width:18px}
+.ov{z-index:8}.sheet{z-index:9}
+.sheet{border-radius:22px 22px 0 0;padding-left:18px;padding-right:18px}
+.sheet h2{font-size:21px;margin-top:8px;letter-spacing:-.2px}
+.sbar{margin:0 -18px 4px;padding:10px 18px 8px}
+.xbtn{padding:8px 14px;font-size:14px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.mt{border:1px solid var(--line);background:#fff;border-radius:16px;padding:16px 12px;font-size:14.5px;font-weight:700;color:var(--k);display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left}
+.mt span{font-size:26px}
+.mt:active{background:#fffbea;border-color:var(--y)}
+.mlist{background:var(--bg);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.ml{display:block;width:100%;text-align:left;border:none;background:none;padding:14px 14px;font-size:15px;font-weight:600;color:var(--k);border-top:1px solid #e3e3df}
+.ml:first-child{border-top:none}
+.msec{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:#fff}
+.msec>summary{padding:14px;font-weight:700;font-size:15px;list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.msec>summary::-webkit-details-marker{display:none}
+.msec>summary::after{content:"›";font-size:22px;color:#aaa;transition:transform .15s}
+.msec[open]>summary::after{transform:rotate(90deg)}
+.msec>div{padding:0 14px 12px}
+.btn{border-radius:14px}
+.inout button{border-radius:14px;height:56px}
+.big{border-radius:18px}
+.fld input,.fld select{border-radius:12px}
+.empty{padding:50px 24px}
 </style>
 </head>
 <body>
@@ -192,21 +254,21 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
 <!-- Ana ekran -->
 <div class="hide" id="mainView">
 <header>
-  <div class="brand"><div><h1><b>erkatem</b> Stok</h1><div class="who" id="who"></div></div><button class="menu-btn" id="menuBtn">☰ Menü</button></div>
-  <div class="stats">
+  <div class="brand"><div class="logo"><span class="lm">e</span><div><h1><b>erkatem</b> Stok</h1><div class="who" id="who"></div></div></div><button class="menu-btn" id="menuBtn" aria-label="Menü">☰</button></div>
+  <div class="stats hide">
     <div class="stat"><div class="n" id="sCount">–</div><div class="l">Ürün</div></div>
     <div class="stat warn"><div class="n" id="sLow">–</div><div class="l">Kritik</div></div>
     <div class="stat"><div class="n" id="sZero">–</div><div class="l">Stokta yok</div></div>
   </div>
 </header>
 <div class="pano hide" id="pano"></div>
+<div class="sec-h">Ürünler</div>
 <div class="tools">
-  <input class="search" id="q" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off">
+  <div class="sbox"><span class="sic">🔍</span><input class="search" id="q" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off"><button class="sortb" id="sortBtn">⇅ Çok satan</button></div>
   <div class="chips">
-    <button class="chip" id="sortBtn" style="background:#fff8dc;border-color:#f0d27a">⇅ Çok satan</button>
     <button class="chip on" data-f="all">Tümü</button>
-    <button class="chip" data-f="low">Kritik</button>
-    <button class="chip" data-f="zero">Stokta yok</button>
+    <button class="chip" data-f="low">Kritik <i id="cLow"></i></button>
+    <button class="chip" data-f="zero">Stokta yok <i id="cZero"></i></button>
     <button class="chip" data-f="diff">Wolvox farkı</button>
     <button class="chip" data-f="recent">Son hareket</button>
     <button class="chip" data-f="passive">Pasif</button>
@@ -215,6 +277,13 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
 <div id="status"></div>
 <div class="list" id="list"><div class="empty">Yükleniyor…</div></div>
 <button class="fab hide" id="fab" aria-label="Ürün ekle">+</button>
+<nav class="tabbar" id="tabbar">
+  <button class="tb on" data-tab="stok"><span>📦</span>Stok</button>
+  <button class="tb hide" data-tab="docs"><span>📄</span>Teklif</button>
+  <button class="tb hide" data-tab="pick"><span>🧺</span>Hazırla<em class="hide" id="tbPick"></em></button>
+  <button class="tb hide" data-tab="sum"><span>📊</span>Özet</button>
+  <button class="tb" data-tab="menu"><span>☰</span>Daha</button>
+</nav>
 </div>
 
 <div class="ov" id="ov"></div>
@@ -272,8 +341,20 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
 <div class="sheet" id="shMenu">
   <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2>Menü</h2>
-  <div id="teamSec" class="hide">
-    <div class="meta" style="margin-top:6px">👥 Ekip ve roller · <b id="teamCount">0/10</b></div>
+  <div class="mgrid">
+    <button class="mt hide" id="docsBtn"><span>📄</span>Teklif & Sipariş</button>
+    <button class="mt hide" id="pickBtn"><span>🧺</span>Hazırlanacaklar</button>
+    <button class="mt hide" id="cariBtn"><span>📇</span>Cariler</button>
+    <button class="mt hide" id="priceBtn"><span>💰</span>Fiyat girişi</button>
+    <button class="mt hide" id="sumBtn"><span>📊</span>Günlük özet</button>
+    <button class="mt hide" id="movesBtn"><span>🕘</span>Tüm hareketler</button>
+  </div>
+  <div class="mlist">
+    <button class="ml hide" id="notifBtn">🔔 Akşam özet bildirimini aç</button>
+    <button class="ml" id="copyBtn">📋 Kritik stok listesini kopyala</button>
+    <button class="ml" id="reloadBtn">🔄 Listeyi yenile</button>
+  </div>
+  <details id="teamSec" class="hide msec"><summary><span>👥 Ekip ve roller · <b id="teamCount">0/10</b></span></summary><div>
     <div id="team"></div>
     <div class="rolebox" style="background:#fff8dc">
       <b style="font-size:15px">➕ Çalışan ekle</b>
@@ -286,27 +367,17 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
     </div>
     <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, fiyatlar, Excel yükle, giriş/çıkış, sayım, depocu hareketlerini görür<br><b>Depocu:</b> ürün ekle, isim düzelt, giriş, çıkış, sayım (fiyat göremez)<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Erişim yok:</b> giriş yapsa da hiçbir şey göremez</div>
     <p class="small">Çalışanı ekledikten sonra ona site linkini, kullanıcı adını ve şifresini ilet. En fazla 10 çalışan eklenebilir.</p>
-  </div>
-  <div id="impSec" class="hide">
-    <div class="meta" style="margin-top:14px">📥 Excel'den toplu ürün yükle</div>
+  </div></details>
+  <details id="impSec" class="hide msec"><summary>📥 Excel'den toplu ürün yükle</summary><div>
     <p class="small">Wolvox'tan aldığın stok listesini (.xlsx veya .csv) seç. "Stok Kodu", "Stok Adı", "Birim", "Miktar", "Durumu" sütunları otomatik tanınır. Aynı stok kodlu ürün güncellenir, yeniler eklenir.</p>
     <div class="fld"><label>Miktar sütunu ne olsun?</label><select id="qtyMode"><option value="wolvox" selected>Wolvox miktarı olarak al (sayılanla yan yana)</option><option value="none">Miktarları alma</option><option value="stock">Sayılan stok olarak al (eski miktarları ezer)</option></select></div>
     <label class="chk"><input type="checkbox" id="skipPas" checked> Pasif ürünleri alma</label>
     <label class="chk"><input type="checkbox" id="withPrice"> Fiyatları da al (satış / alış fiyatı sütunları)</label>
     <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin:8px 0;font-size:15px">
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
-  </div>
-  <button class="btn pri hide" id="sumBtn" style="margin-top:14px">📊 Günlük özet</button>
-  <button class="btn sec hide" id="notifBtn" style="margin-top:8px">🔔 Akşam özet bildirimini aç</button>
-  <button class="btn pri hide" id="priceBtn" style="margin-top:8px">💰 Hızlı fiyat girişi</button>
-  <button class="btn pri hide" id="cariBtn" style="margin-top:8px">📇 Cariler (müşteriler)</button>
-  <button class="btn pri hide" id="docsBtn" style="margin-top:8px">📄 Teklif & Sipariş</button>
-  <button class="btn pri hide" id="pickBtn" style="margin-top:8px">📦 Hazırlanacak siparişler</button>
-  <button class="btn pri hide" id="movesBtn" style="margin-top:8px">🕘 Tüm hareketler (düzelt / sil)</button>
-  <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
-  <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
-  <button class="btn del" id="logoutBtn">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:55</div>
+  </div></details>
+  <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 21:50 · yeni arayüz</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -321,7 +392,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn sec hide" id="pMore">Daha fazla göster</button>
 </div>
 <div class="sheet" id="shCari">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2>📇 Cariler</h2>
   <div class="meta" id="cStat"></div>
   <input class="search" id="cq" type="search" placeholder="Cari ara (ad, kod, telefon)…" autocomplete="off" style="margin-bottom:8px">
@@ -335,7 +406,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   </div>
 </div>
 <div class="sheet" id="shCust">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="kName"></h2>
   <div class="meta" id="kMeta"></div>
   <div class="fld"><label>Cari adı</label><input id="kN"></div>
@@ -347,7 +418,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div class="log" id="kBuys"></div>
 </div>
 <div class="sheet" id="shDocs">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2>📄 Teklif & Sipariş</h2>
   <div class="chips" style="margin:6px 0 10px"><button class="chip on" data-dk="teklif">Teklifler</button><button class="chip" data-dk="siparis">Siparişler</button></div>
   <button class="btn pri" id="newDoc">+ Yeni teklif</button>
@@ -355,7 +426,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div id="docList" style="margin-top:12px"></div>
 </div>
 <div class="sheet" id="shDoc">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="dTitle"></h2>
   <div class="meta" id="dMeta"></div>
   <div class="fld"><label>Cari</label><input id="dCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
@@ -372,12 +443,12 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn del hide" id="dDel">Sil</button>
 </div>
 <div class="sheet" id="shPick">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="kTitle">📦 Hazırlanacak siparişler</h2>
   <div id="pkBody"></div>
 </div>
 <div class="sheet" id="shMoves">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2>🕘 Tüm hareketler</h2>
   <div class="meta">Son 300 hareket. ✏️ ile düzelt, silince stok geri alınır.</div>
   <input class="search" id="mvq" type="search" placeholder="Ürün, cari ya da kişi ara…" autocomplete="off" style="margin-bottom:8px">
@@ -385,7 +456,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div id="mvList"></div>
 </div>
 <div class="sheet" id="shPaste">
-  <div class="grab"></div>
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2>📋 WhatsApp mesajından oluştur</h2>
   <div class="meta">Müşterinin sipariş mesajını kopyala, buraya yapıştır. Ürünleri ben bulayım, sen kontrol et.</div>
   <div class="fld"><label>Cari</label><input id="pCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
@@ -498,6 +569,9 @@ async function boot(){
   $("movesBtn").classList.toggle("hide",!can("fixmove"));
   $("sumBtn").classList.toggle("hide",!can("sum"));
   $("notifBtn").classList.toggle("hide",!can("sum"));if(can("sum"))notifLabel();
+  document.querySelector('[data-tab="docs"]').classList.toggle("hide",!can("docs"));
+  document.querySelector('[data-tab="pick"]').classList.toggle("hide",!can("pick"));
+  document.querySelector('[data-tab="sum"]').classList.toggle("hide",!can("sum"));
   view("mainView");
   await loadItems();
   loadPano();
@@ -542,6 +616,7 @@ async function loadPeople(){
 function render(){
   const act=items.filter(i=>!i.passive);
   $("sCount").textContent=fmt(act.length);$("sLow").textContent=fmt(act.filter(isLow).length);$("sZero").textContent=fmt(act.filter(isZero).length);
+  {const l=act.filter(isLow).length,z=act.filter(isZero).length;$("cLow").textContent=l?fmt(l):"";$("cZero").textContent=z?fmt(z):""}
   const q=norm($("q").value.trim());
   let arr=items.filter(i=>filter==="passive"?i.passive:!i.passive).filter(i=>!q||norm(i.name+" "+(i.code||"")+" "+(i.brand||"")).includes(q));
   if(filter==="low")arr=arr.filter(isLow);
@@ -549,18 +624,26 @@ function render(){
   if(filter==="diff")arr=arr.filter(hasDiff);
   if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
   else arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr")):((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
-  if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Menü → Excel'den yükle</b>.":""}</div>`;return}
+  if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Daha → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
     <div class="info"><div class="nm">${esc(i.name)}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
     <div class="sub">${esc([i.code,i.brand,tl(i.sell_price)].filter(Boolean).join(" · ")||"—")}</div></div>
-    <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div>${i.wolvox_qty!=null?`<div class="u" style="${hasDiff(i)?"color:#b45309;font-weight:700":""}">W: ${fmt(i.wolvox_qty)}</div>`:""}</div></div>`).join("")+
+    <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div>${i.wolvox_qty!=null?`<div class="w${hasDiff(i)?" df":""}">Wolvox ${fmt(i.wolvox_qty)}</div>`:""}</div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
 }
 let lockY=0;
 function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
 let panoT=0;
-function open(id){if(!id&&me&&Date.now()-panoT>8000)setTimeout(loadPano,50);["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste","shSum"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+function open(id){if(!id&&me&&Date.now()-panoT>8000)setTimeout(loadPano,50);["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste","shSum"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}setTab(TABOF[id]||(id?null:"stok"))}
+const TABOF={shDocs:"docs",shDoc:"docs",shPaste:"docs",shPick:"pick",shSum:"sum",shMenu:"menu",shPrice:"menu",shCari:"menu",shCust:"menu",shMoves:"menu"};
+function setTab(t){if(!t)return;document.querySelectorAll(".tb").forEach(b=>b.classList.toggle("on",b.dataset.tab===t))}
+document.querySelectorAll(".tb").forEach(b=>b.onclick=()=>{const t=b.dataset.tab;
+  if(t==="stok"){open(null);window.scrollTo({top:0,behavior:"smooth"});return}
+  if(t==="docs")return $("docsBtn").click();
+  if(t==="pick")return $("pickBtn").click();
+  if(t==="sum")return $("sumBtn").click();
+  if(t==="menu")return $("menuBtn").click()});
 $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip[data-f]").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));render()});
@@ -1156,7 +1239,7 @@ async function loadPano(){
   if(can("sum"))jobs.push(sb.rpc("daily_summary",{p_day:null}).then(r=>r.data).catch(()=>null));else jobs.push(Promise.resolve(null));
   const [oo,tk,sm]=await Promise.all(jobs);
   if(oo){const open=oo.length,np=oo.filter(o=>o.unpriced>0).length,mine=oo.filter(o=>o.mine).length;
-    T.push({k:"pick",n:open,l:"Hazırlanacak sipariş",hot:open>0});
+    T.push({k:"pick",n:open,l:"Hazırlanacak sipariş",hot:open>0});$("tbPick").textContent=open;$("tbPick").classList.toggle("hide",!open);
     if(can("docs"))T.push({k:"np",n:np,l:"Fiyat bekleyen sipariş",hot:np>0,red:np>0});
     else T.push({k:"mine",n:mine,l:"Senin yazdığın liste"})}
   const low=act.filter(isLow).length;T.push({k:"low",n:low,l:"Kritik stok",red:low>0});
