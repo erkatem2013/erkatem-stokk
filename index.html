@@ -103,13 +103,13 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 <div class="auth hide" id="authView">
   <div class="top"><h1><b>erkatem</b> Stok</h1><p>Dükkân stok takibi</p></div>
   <div class="box">
-    <div class="tabs"><button class="on" data-t="in">Giriş yap</button><button data-t="up">Kayıt ol</button></div>
+    <h2 style="margin:0 0 14px">Giriş yap</h2>
     <div id="fullBox" class="fld hide"><label>Ad soyad</label><input id="aFull" autocomplete="name" placeholder="ör. Ahmet Yılmaz"></div>
     <div class="fld"><label>Kullanıcı adı</label><input id="aUser" autocapitalize="none" autocorrect="off" autocomplete="username" placeholder="ör. ahmet"></div>
     <div class="fld"><label>Şifre</label><input id="aPass" type="password" autocomplete="current-password" placeholder="En az 6 karakter"></div>
     <div class="err" id="aErr"></div>
     <button class="btn pri" id="aBtn">Giriş yap</button>
-    <p class="small" id="aHint" style="margin-top:14px">Hesabın yoksa "Kayıt ol" sekmesinden kayıt ol. Patron onaylayınca stoka erişebilirsin.</p>
+    <p class="small" id="aHint" style="margin-top:14px">Hesapları patron açar. Kullanıcı adını ve şifreni patrondan al.</p>
   </div>
 </div>
 
@@ -186,10 +186,19 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
   <div class="grab"></div>
   <h2>Menü</h2>
   <div id="teamSec" class="hide">
-    <div class="meta" style="margin-top:6px">👥 Ekip ve roller</div>
+    <div class="meta" style="margin-top:6px">👥 Ekip ve roller · <b id="teamCount">0/10</b></div>
     <div id="team"></div>
-    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, Excel yükle, giriş/çıkış, sayım<br><b>Depocu:</b> giriş, çıkış, sayım<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Bekliyor:</b> hiçbir şey göremez</div>
-    <p class="small">Yeni çalışan: sitenin linkini gönder, "Kayıt ol" ile hesap açsın. Burada görünür, rolünü sen seçersin.</p>
+    <div class="rolebox" style="background:#fff8dc">
+      <b style="font-size:15px">➕ Çalışan ekle</b>
+      <div class="fld" style="margin-top:8px"><label>Ad soyad</label><input id="nFull" placeholder="ör. Ahmet Yılmaz"></div>
+      <div class="two"><div class="fld"><label>Kullanıcı adı</label><input id="nUser" autocapitalize="none" autocorrect="off" placeholder="ör. ahmet"></div>
+      <div class="fld"><label>Şifre</label><input id="nPass" autocapitalize="none" autocorrect="off" placeholder="en az 6 karakter"></div></div>
+      <div class="fld"><label>Rol</label><select id="nRole"><option value="depocu">Depocu</option><option value="satis">Satış</option><option value="yonetici">Yönetici</option><option value="izleyici">İzleyici</option></select></div>
+      <button class="btn pri" id="nAdd">Çalışanı ekle</button>
+      <div class="small" id="nMsg" style="margin-top:6px"></div>
+    </div>
+    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, Excel yükle, giriş/çıkış, sayım<br><b>Depocu:</b> giriş, çıkış, sayım<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Erişim yok:</b> giriş yapsa da hiçbir şey göremez</div>
+    <p class="small">Çalışanı ekledikten sonra ona site linkini, kullanıcı adını ve şifresini ilet. En fazla 10 çalışan eklenebilir.</p>
   </div>
   <div id="impSec" class="hide">
     <div class="meta" style="margin-top:14px">📥 Excel'den toplu ürün yükle</div>
@@ -238,7 +247,7 @@ const userToEmail=u=>u+"@"+EMAIL_DOMAIN;
 const cleanUser=u=>norm(u).replace(/[^a-z0-9._-]/g,"");
 
 /* ---------- Giriş ---------- */
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+if(false)document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   authMode=b.dataset.t;document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
   $("fullBox").classList.toggle("hide",authMode!=="up");$("aBtn").textContent=authMode==="up"?"Kayıt ol":"Giriş yap";
   $("aPass").autocomplete=authMode==="up"?"new-password":"current-password";$("aErr").textContent="";
@@ -402,18 +411,51 @@ $("delYes").onclick=async()=>{if(!editing)return;const {error}=await sb.from("it
 /* ---------- Menü ---------- */
 $("menuBtn").onclick=async()=>{open("shMenu");if(can("team")){await loadPeople();renderTeam()}};
 $("reloadBtn").onclick=async()=>{open(null);await loadItems();toast("Liste yenilendi")};
+async function adminCall(body){
+  const {data,error}=await sb.functions.invoke("admin-users",{body});
+  if(error){let m=error.message;try{const b=await error.context.json();if(b&&b.error)m=b.error}catch(e){}throw new Error(m)}
+  if(data&&data.error)throw new Error(data.error);
+  return data;
+}
+const STAFF=["yonetici","depocu","satis","izleyici"];
 function renderTeam(){
   const list=Object.values(people).filter(p=>p.id!==me.id);
-  if(!list.length){$("team").innerHTML=`<p class="small">Henüz başka kullanıcı yok.</p>`;return}
-  list.sort((a,b)=>(a.role==="bekliyor"?0:1)-(b.role==="bekliyor"?0:1)||(a.full_name||a.username).localeCompare(b.full_name||b.username,"tr"));
-  $("team").innerHTML=list.map(p=>`<div class="mrow"><div class="mn">${esc(p.full_name||p.username)}<small>@${esc(p.username)} · ${ROLES[p.role]||p.role}</small></div>
-    <select data-id="${esc(p.id)}">${["bekliyor","yonetici","depocu","satis","izleyici"].map(k=>`<option value="${k}" ${p.role===k?"selected":""}>${ROLES[k]}</option>`).join("")}</select></div>`).join("");
+  $("teamCount").textContent=list.filter(p=>STAFF.includes(p.role)).length+"/10";
+  if(!list.length){$("team").innerHTML=`<p class="small">Henüz çalışan yok. Aşağıdan ekle.</p>`;return}
+  list.sort((a,b)=>(a.full_name||a.username).localeCompare(b.full_name||b.username,"tr"));
+  $("team").innerHTML=list.map(p=>`<div class="mrow" style="flex-wrap:wrap"><div class="mn">${esc(p.full_name||p.username)}<small>kullanıcı adı: ${esc(p.username)}</small></div>
+    <select data-id="${esc(p.id)}">${["yonetici","depocu","satis","izleyici","bekliyor"].map(k=>`<option value="${k}" ${p.role===k?"selected":""}>${k==="bekliyor"?"Erişim yok":ROLES[k]}</option>`).join("")}</select>
+    <div style="flex-basis:100%;display:flex;gap:8px;margin-top:6px"><button class="chip" data-pw="${esc(p.id)}">🔑 Şifre sıfırla</button><button class="chip" data-del="${esc(p.id)}" style="color:var(--red)">Sil</button></div>
+    <div class="hide" id="x_${esc(p.id)}" style="flex-basis:100%;margin-top:6px"></div></div>`).join("");
   $("team").querySelectorAll("select").forEach(s=>s.onchange=async()=>{
     const {error}=await sb.rpc("set_role",{p_user:s.dataset.id,p_role:s.value});
-    if(error){toast("Rol değişmedi: "+errTr(error.message));return}
+    if(error){toast("Rol değişmedi: "+errTr(error.message));renderTeam();return}
     people[s.dataset.id].role=s.value;toast("Rol güncellendi");renderTeam();
   });
+  $("team").querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{const id=b.dataset.pw,x=$("x_"+id);
+    x.classList.remove("hide");x.innerHTML=`<div class="two"><input class="search" style="font-size:16px;padding:10px" placeholder="Yeni şifre (en az 6)" autocapitalize="none" autocorrect="off"><button class="btn pri" style="margin:0;height:44px">Kaydet</button></div>`;
+    const inp=x.querySelector("input"),btn=x.querySelector("button");inp.focus();
+    btn.onclick=async()=>{if(inp.value.length<6)return toast("Şifre en az 6 karakter");btn.disabled=true;
+      try{await adminCall({action:"reset_password",user_id:id,password:inp.value});toast("Şifre değişti");x.classList.add("hide")}catch(e){toast(e.message)}finally{btn.disabled=false}}});
+  $("team").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const id=b.dataset.del,x=$("x_"+id);
+    x.classList.remove("hide");x.innerHTML=`<div class="confirm" style="margin:0"><p><b>${esc(people[id].full_name||people[id].username)}</b> silinsin mi? Geçmiş hareketleri kalır.</p><div class="two"><button class="btn sec" style="margin:0">Vazgeç</button><button class="btn out" style="margin:0">Evet, sil</button></div></div>`;
+    const [no,yes]=x.querySelectorAll("button");no.onclick=()=>x.classList.add("hide");
+    yes.onclick=async()=>{yes.disabled=true;try{await adminCall({action:"delete",user_id:id});delete people[id];toast("Silindi");renderTeam()}catch(e){toast(e.message);yes.disabled=false}}});
 }
+$("nAdd").onclick=async()=>{
+  const body={action:"create",full_name:$("nFull").value.trim(),username:cleanUser($("nUser").value),password:$("nPass").value,role:$("nRole").value};
+  $("nMsg").textContent="";
+  if(!body.full_name)return $("nMsg").textContent="Ad soyad gir";
+  if(body.username.length<3)return $("nMsg").textContent="Kullanıcı adı en az 3 karakter (harf/rakam)";
+  if(body.password.length<6)return $("nMsg").textContent="Şifre en az 6 karakter";
+  $("nAdd").disabled=true;
+  try{await adminCall(body);
+    $("nMsg").innerHTML=`✅ Eklendi. Çalışana ilet:<br>Kullanıcı adı: <b>${esc(body.username)}</b><br>Şifre: <b>${esc(body.password)}</b>`;
+    $("nFull").value="";$("nUser").value="";$("nPass").value="";
+    await loadPeople();renderTeam();
+  }catch(e){$("nMsg").textContent="❌ "+e.message}
+  finally{$("nAdd").disabled=false}
+};
 $("copyBtn").onclick=async()=>{
   const low=items.filter(i=>!i.passive&&(isLow(i)||isZero(i)));
   if(!low.length)return toast("Kritik ürün yok");
