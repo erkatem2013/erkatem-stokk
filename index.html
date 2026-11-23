@@ -301,7 +301,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:25</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:35</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -385,6 +385,16 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div class="meta">Müşterinin sipariş mesajını kopyala, buraya yapıştır. Ürünleri ben bulayım, sen kontrol et.</div>
   <div class="fld"><label>Cari</label><input id="pCust" placeholder="Cari adı yaz" autocomplete="off" autocorrect="off"></div>
   <div class="sug hide" id="pCustSug"></div>
+  <div class="rolebox" style="margin:0 0 10px;padding:10px 12px">
+    <b>📎 Sohbeti dosyadan al</b>
+    <div class="small" style="margin:4px 0 8px">WhatsApp'ta sohbet → kişi adına dokun → <b>Sohbeti Dışa Aktar → Medya Olmadan</b> → <b>Dosyalar'a Kaydet</b>. Sonra aşağıdan o dosyayı seç.</div>
+    <input type="file" id="pFile" accept=".zip,.txt,application/zip,text/plain" style="font-size:15px">
+    <div id="pChat" class="hide" style="margin-top:8px">
+      <div class="fld" style="margin:0 0 6px"><label>Bu tarihten itibaren</label><input type="date" id="pFrom" style="font-size:16px"></div>
+      <div class="chips" id="pSenders" style="margin:0 0 6px"></div>
+      <div class="small" id="pChatInfo"></div>
+    </div>
+  </div>
   <textarea class="paste" id="pText" placeholder="ör.&#10;1 KOLİ HAZNELİ FARAŞ&#10;3 KOLİ MİNİ ÇÖP POŞET&#10;3 pkt acord bez"></textarea>
   <button class="btn pri" id="pParse">🔎 Ürünleri bul</button>
   <div id="pRes" style="margin-top:12px"></div>
@@ -1277,6 +1287,53 @@ const M = (() => {
 
 
 let pRows=[];
+/* --- WhatsApp sohbet dosyası (.zip / .txt) --- */
+let chatMsgs=[],chatOff=new Set();
+async function unzipTxt(buf){ // sadece sohbet .txt dosyasını çıkarır
+  const u=new Uint8Array(buf),dv=new DataView(buf);let e=-1;
+  for(let i=u.length-22;i>=Math.max(0,u.length-70000);i--)if(dv.getUint32(i,true)===0x06054b50){e=i;break}
+  if(e<0)throw new Error("Zip okunamadı");
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const files=[];
+  for(let k=0;k<n;k++){if(dv.getUint32(p,true)!==0x02014b50)break;
+    const m=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(u.subarray(p+46,p+46+nl));files.push({name,m,cs,lo});p+=46+nl+xl+cl}
+  const f=files.find(x=>/_chat\.txt$/i.test(x.name))||files.find(x=>/\.txt$/i.test(x.name));if(!f)throw new Error("Zip içinde sohbet yok");
+  const ds=f.lo+30+dv.getUint16(f.lo+26,true)+dv.getUint16(f.lo+28,true);const data=u.subarray(ds,ds+f.cs);
+  if(f.m===0)return new TextDecoder().decode(data);
+  if(f.m!==8||typeof DecompressionStream==="undefined")throw new Error("Bu zip açılamadı, telefonu güncelle");
+  const out=await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer();
+  return new TextDecoder().decode(out);
+}
+function parseChat(txt){
+  const R1=/^\u200e?\[(\d{1,2})[./](\d{1,2})[./](\d{2,4})[ ,]+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*([^:]{1,60}):\s?(.*)$/,
+        R2=/^\u200e?(\d{1,2})[./](\d{1,2})[./](\d{2,4})[ ,]+(\d{1,2}):(\d{2})\s*-\s*([^:]{1,60}):\s?(.*)$/;
+  const msgs=[];
+  txt.replace(/\r/g,"").split("\n").forEach(l=>{const m=l.match(R1)||l.match(R2);
+    if(m){let y=+m[3];if(y<100)y+=2000;msgs.push({d:`${y}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`,t:m[4].padStart(2,"0")+":"+m[5],who:m[6].replace(/[\u200e\u202a\u202c]/g,"").trim(),txt:m[7]})}
+    else if(msgs.length&&l.trim())msgs[msgs.length-1].txt+="\n"+l});
+  return msgs.filter(x=>{const t=x.txt.replace(/[\u200e]/g,"").trim();x.txt=t;
+    return t&&!/(şifrelidir|end-to-end|eklendi>|attached:|omitted|dahil edilmedi|silindi|deleted|kişilere eklendi|<Medya|\.(jpg|jpeg|png|pdf|opus|mp4|webp|vcf)\b)/i.test(t)});
+}
+function chatFill(){
+  const from=$("pFrom").value;const sel=chatMsgs.filter(x=>(!from||x.d>=from)&&!chatOff.has(x.who));
+  $("pText").value=sel.map(x=>x.txt).join("\n");$("pRes").innerHTML="";$("pMake").classList.add("hide");
+  $("pChatInfo").textContent=`${sel.length} mesaj alındı. Gerekirse tarihi veya kişileri değiştir, sonra "Ürünleri bul"a bas.`;
+}
+$("pFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{const buf=await f.arrayBuffer();const isZip=new Uint8Array(buf.slice(0,2))[0]===0x50;
+    const txt=isZip?await unzipTxt(buf):new TextDecoder().decode(buf);
+    chatMsgs=parseChat(txt);if(!chatMsgs.length)throw new Error("Dosyada mesaj bulunamadı");
+    const who=[...new Set(chatMsgs.map(x=>x.who))];chatOff=new Set(who.filter(w=>/erkatem/i.test(w)));
+    if(chatOff.size===who.length)chatOff=new Set();
+    // varsayılan: son mesaj gününden 2 gün öncesi
+    const last=chatMsgs.filter(x=>!chatOff.has(x.who)).map(x=>x.d).sort().pop();const d=new Date(last+"T12:00:00Z");d.setUTCDate(d.getUTCDate()-2);$("pFrom").value=d.toISOString().slice(0,10);
+    $("pSenders").innerHTML=who.map(w=>`<button class="chip ${chatOff.has(w)?"":"on"}" data-who="${esc(w)}">${esc(w)}</button>`).join("");
+    if(!$("pCust").value.trim()){const c=customers.map(c=>({c,n:norm(c.name)})).filter(x=>x.n.length>=4&&who.some(w=>norm(w).includes(x.n))).sort((a,b)=>b.n.length-a.n.length)[0];if(c)$("pCust").value=c.c.name}
+    $("pChat").classList.remove("hide");chatFill();
+  }catch(err){toast("Olmadı: "+err.message)}
+  e.target.value=""};
+$("pFrom").onchange=chatFill;
+$("pSenders").onclick=e=>{const b=e.target.closest("[data-who]");if(!b)return;const w=b.dataset.who;chatOff.has(w)?chatOff.delete(w):chatOff.add(w);b.classList.toggle("on",!chatOff.has(w));chatFill()};
 custSuggest("pCust","pCustSug");
 function openPaste(){open("shPaste");document.querySelector('[data-mk2="teklif"]').classList.toggle("hide",BASIC());if(!$("pText").value)$("pRes").innerHTML="";}
 $("pasteBtn").onclick=openPaste;
