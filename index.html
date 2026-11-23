@@ -167,7 +167,8 @@ html,body{overscroll-behavior-y:none}
   <h2 id="iName"></h2>
   <div class="meta" id="iMeta"></div>
   <div class="big" id="iBig"><span class="v" id="iQty">0</span><span class="u" id="iUnit"></span></div>
-  <div class="small" id="iWol" style="text-align:center;margin:-6px 0 10px"></div>
+  <div class="small" id="iWol" style="text-align:center;margin:-6px 0 6px"></div>
+  <div class="small" id="iBuy" style="text-align:center;margin:0 0 10px;color:#333"></div>
   <div id="moveBox">
     <div class="amt"><button id="mDec">−</button><input id="mAmt" type="number" inputmode="decimal" value="1" min="0"><button id="mInc">+</button></div>
     <div class="two">
@@ -289,7 +290,7 @@ const EMAIL_DOMAIN="erkatem.com";
 const $=id=>document.getElementById(id);
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
 const PERM={cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
-let costs={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
+let costs={};let costMeta={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
 const can=a=>!!me&&PERM[a].includes(me.role);
 const tl=n=>(n===null||n===undefined||n==="")?"":"₺"+Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmt=n=>{n=Number(n)||0;return Number.isInteger(n)?n.toLocaleString("tr-TR"):n.toLocaleString("tr-TR",{maximumFractionDigits:2})};
@@ -374,7 +375,7 @@ async function loadItems(){
     }
     items=all;
     costs={};
-    if(can("price")){for(let from=0;;from+=1000){const {data,error}=await sb.from("item_costs").select("item_id,buy_price").range(from,from+999);if(error||!data)break;data.forEach(c=>costs[c.item_id]=c.buy_price);if(data.length<1000)break}}
+    if(can("price")){for(let from=0;;from+=1000){const {data,error}=await sb.from("item_costs").select("item_id,buy_price,last_buy_at,last_buy_unit,last_buy_supplier").range(from,from+999);if(error||!data)break;data.forEach(c=>{costs[c.item_id]=c.buy_price;costMeta[c.item_id]=c});if(data.length<1000)break}}
     render();
   }catch(e){status("Liste yüklenemedi: "+esc(errTr(e.message)));$("list").innerHTML=""}
 }
@@ -441,9 +442,11 @@ $("mCust").addEventListener("input",()=>{clearTimeout(lastT);lastT=setTimeout(as
 async function showItem(id,keep){
   cur=items.find(i=>i.id===id);if(!cur)return;
   $("iName").textContent=cur.name;
-  $("iMeta").textContent=[cur.code,cur.brand,cur.sell_price!=null?"Satış: "+tl(cur.sell_price):"",can("price")&&costs[cur.id]!=null?"Alış: "+tl(costs[cur.id]):"",cur.min_qty?("Kritik: "+fmt(cur.min_qty)+" "+(cur.unit||"")):""].filter(Boolean).join(" · ")||" ";
+  $("iMeta").textContent=[cur.code,cur.brand,cur.sell_price!=null?"Satış: "+tl(cur.sell_price):"",cur.min_qty?("Kritik: "+fmt(cur.min_qty)+" "+(cur.unit||"")):""].filter(Boolean).join(" · ")||" ";
   $("iQty").textContent=fmt(cur.qty);$("iUnit").textContent=cur.unit||"adet";
   $("iBig").classList.toggle("low",isLow(cur)||isZero(cur));
+  {const cm=costMeta[cur.id];const sup=cm&&cm.last_buy_supplier?(customers.find(c=>c.code===cm.last_buy_supplier)||{}).name:"";
+   $("iBuy").innerHTML=can("price")&&costs[cur.id]!=null?`🔒 Son alış: <b>${tl(costs[cur.id])}</b>${cm&&cm.last_buy_unit&&cm.last_buy_unit!==cur.unit?" / "+esc(cm.last_buy_unit):""}${cm&&cm.last_buy_at?" · "+new Date(cm.last_buy_at).toLocaleDateString("tr-TR"):""}${sup?" · "+esc(sup):""}`:"";}
   $("iWol").innerHTML=cur.wolvox_qty!=null?`Wolvox'ta: <b>${fmt(cur.wolvox_qty)} ${esc(cur.unit||"")}</b>${hasDiff(cur)?` · <span style="color:#b45309;font-weight:700">fark ${Number(cur.qty||0)-Number(cur.wolvox_qty)>0?"+":""}${fmt(Number(cur.qty||0)-Number(cur.wolvox_qty))}</span>`:" ✓"}${cur.wolvox_at?` · ${new Date(cur.wolvox_at).toLocaleDateString("tr-TR")}`:""}`:"";
   $("moveBox").classList.toggle("hide",!(can("in")||can("out")));
   $("bIn").classList.toggle("hide",!can("in"));$("bOut").classList.toggle("hide",!can("out"));
@@ -499,8 +502,8 @@ async function saveCost(id){
   if(!can("price"))return;
   const b=numOrNull($("fBuy").value);
   if(b===(costs[id]??null))return;
-  const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:b,updated_at:new Date().toISOString()});
-  if(error)throw error;costs[id]=b;
+  const today=new Date().toISOString().slice(0,10);const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:b,last_buy_at:b==null?null:today,last_buy_unit:null,last_buy_supplier:null,updated_at:new Date().toISOString()});
+  if(error)throw error;costs[id]=b;costMeta[id]={last_buy_at:b==null?null:today};
 }
 $("fSave").onclick=async()=>{
   if(busy)return;const full=can("add"),mgr=can("manage"),pr=can("price");const qty=Number($("fQty").value)||0;
@@ -612,8 +615,8 @@ $("pList").addEventListener("change",async e=>{
   const v=numOrNull(inp.value);st.textContent="…";
   try{
     if(inp.dataset.k==="buy"){
-      const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:v,updated_at:new Date().toISOString()});if(error)throw error;
-      costs[id]=v;
+      const today=new Date().toISOString().slice(0,10);const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:v,last_buy_at:v==null?null:today,last_buy_unit:null,last_buy_supplier:null,updated_at:new Date().toISOString()});if(error)throw error;
+      costs[id]=v;costMeta[id]={last_buy_at:v==null?null:today};
       const m=Number($("pMargin").value);const sellInp=row.querySelector('[data-k="sell"]');
       if(v!=null&&m>0&&sellInp.value===""){
         const sp=Math.round(v*(1+m/100)*100)/100;sellInp.value=sp;
