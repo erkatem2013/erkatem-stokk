@@ -301,7 +301,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <button class="btn sec" id="copyBtn" style="margin-top:14px">Kritik stok listesini kopyala</button>
   <button class="btn sec" id="reloadBtn">Listeyi yenile</button>
   <button class="btn del" id="logoutBtn">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:40</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 17:50</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -505,7 +505,7 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat,last_sale").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
     items=all;
@@ -1220,7 +1220,9 @@ const M = (() => {
   const sim = (a,b) => { const A=tri(a),B=tri(b); let n=0; A.forEach(x=>{if(B.has(x))n++}); return n/(A.size+B.size-n); };
   let index = [];
   function build(items){
-    index = items.filter(i=>!i.passive).map(i=>{const t=tok(i.name+" "+(i.brand||""));return {it:i,toks:t,set:new Set(t),tris:t.filter(x=>x.length>=4&&!/^\d/.test(x))}});
+    index = items.filter(i=>!i.passive).map(i=>{const t=tok(i.name+" "+(i.brand||""));return {it:i,toks:t,set:new Set(t),tris:t.filter(x=>x.length>=4&&!/^\d/.test(x)),fw:tok(i.name)[0]||""}});
+    const fc={};index.forEach(e=>{if(e.fw.length>=3&&!/^\d/.test(e.fw))fc[e.fw]=(fc[e.fw]||0)+1});
+    index.forEach(e=>{e.brand=fc[e.fw]>=3&&fc[e.fw]<=150?e.fw:""});
   }
   function stripPrefix(line){
     return line.replace(/^‎?\[?\d{1,2}[./]\d{1,2}[./]\d{2,4}[ ,]+\d{1,2}:\d{2}(:\d{2})?\]?\s*(-\s*)?[^:]{1,40}:\s*/,"").replace(/^[-•*\d]+[.)]\s+/,"").trim();
@@ -1252,6 +1254,7 @@ const M = (() => {
     if(ctx && ctx.mare && ((has("kagit")&&has("havlu"))||has("tuvalet"))) q2.push("mare");
     return q2.filter(w=>!STOP.has(w) && (w.length>=2 || /^\d+$/.test(w)));
   }
+  let curCtx = {};
   function score(entry,q,hist){
     let tot=0, max=0;
     for(let w of q){
@@ -1266,10 +1269,17 @@ const M = (() => {
       tot+=wt*best;
     }
     const cov = max?tot/max:0;
-    const h = hist && hist[entry.it.id] ? 1.2+Math.log1p(hist[entry.it.id])*.4 : 0;
+    // müşteri geçmişi: ne kadar yeniyse o kadar güçlü
+    const hh = hist && hist[entry.it.id]; const now = Date.now();
+    const age = d => d ? (now - new Date(d).getTime())/864e5 : 9999;
+    let h = 0;
+    if (hh) { const a = age(hh.last); h = (1.6 + Math.log1p(hh.cnt||1)*.5) * (a<=90?1:a<=180?.7:.4); }
+    else if (curCtx.brands && entry.brand && curCtx.brands[entry.brand]) h = curCtx.brands[entry.brand]; // müşterinin son aldığı marka
+    // dükkanın genel satışı: son zamanlarda satılmayan ürün geri planda
+    const ga = age(entry.it.last_sale); const g = ga<=45?.35 : ga<=120?0 : -.5;
     const iu = (entry.it.unit||"").toString().toLocaleLowerCase("tr-TR");
     const ub = unitWant && iu ? (iu===unitWant ? .8 : -.3) : 0;
-    return cov*10 + Math.log1p(entry.it.pop_score||0)*.25 + h + ub + (cov>0? -entry.toks.length*.03:0);
+    return cov*10 + Math.log1p(entry.it.pop_score||0)*.25 + h + g + ub + (cov>0? -entry.toks.length*.03:0);
   }
   let unitWant = null;
   function match(line, ctx={}){
@@ -1279,6 +1289,7 @@ const M = (() => {
     const {qty,unit,rest} = parseQty(raw);
     const q = expand(rest, ctx); unitWant = unit && unit!=="adet" ? unit : null;
     if(!q.length) return {raw, qty, unit, cands:[], conf:0};
+    curCtx = ctx;
     const scored = index.map(e=>({e,s:score(e,q,ctx.hist)})).filter(x=>x.s>3).sort((a,b)=>b.s-a.s).slice(0,4);
     const top=scored[0], second=scored[1];
     const conf = !top?0 : top.s>=8.5&&(!second||top.s-second.s>.8)?2 : top.s>=6.5?1 : 0;
@@ -1288,7 +1299,9 @@ const M = (() => {
     // WhatsApp çoklu kopyalama: satır ayırıcı \r, \u2028 olabilir; tarih damgası satır ortasında da olabilir
     text = String(text||"").replace(/\r\n?|[\u2028\u2029\u0085]/g,"\n").replace(/\s*(\u200e?\[\d{1,2}[./]\d{1,2}[./]\d{2,4}[ ,]+\d{1,2}:\d{2})/g,"\n$1");
     return text.split("\n").map(l=>match(l.trim(),ctx)).filter(x=>x); }
-  return {build, parse, match, tok, trn};
+  // müşterinin son 6 ayda aldığı markalar → hafif öncelik
+  function brandsOf(hist){const b={},now=Date.now();index.forEach(e=>{const hh=hist&&hist[e.it.id];if(!hh||!e.brand)return;const a=hh.last?(now-new Date(hh.last).getTime())/864e5:9999;if(a>180)return;b[e.brand]=Math.max(b[e.brand]||0,a<=90?1.1:.7)});return b}
+  return {build, parse, match, tok, trn, brandsOf};
 })();
 
 
@@ -1347,9 +1360,9 @@ $("pParse").onclick=async()=>{
   const txt=$("pText").value.trim();if(!txt)return toast("Mesajı yapıştır");
   $("pParse").disabled=true;$("pRes").innerHTML=`<div class="small">Ürünler aranıyor…</div>`;
   const c=findCust($("pCust").value);let hist={};
-  if(c){const {data}=await sb.from("customer_items").select("item_id,cnt").eq("customer_id",c.id).limit(2000);(data||[]).forEach(x=>hist[x.item_id]=x.cnt)}
+  if(c){const {data}=await sb.from("customer_items").select("item_id,cnt,last_at").eq("customer_id",c.id).limit(3000);(data||[]).forEach(x=>hist[x.item_id]={cnt:x.cnt,last:x.last_at})}
   M.build(items);
-  pRows=M.parse(txt,{hist,mare:!!(c&&norm(c.name).includes("deniz ambalaj"))}).map(r=>({...r,sel:r.cands[0]?r.cands[0].item.id:"",on:!!r.cands[0]&&r.conf>0,qty:r.qty||1}));
+  pRows=M.parse(txt,{hist,brands:M.brandsOf(hist),mare:!!(c&&norm(c.name).includes("deniz ambalaj"))}).map(r=>({...r,sel:r.cands[0]?r.cands[0].item.id:"",on:!!r.cands[0]&&r.conf>0,qty:r.qty||1}));
   renderPaste();$("pParse").disabled=false;
 };
 function renderPaste(){
