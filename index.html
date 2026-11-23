@@ -146,6 +146,7 @@ html,body{overscroll-behavior-y:none}
 <div class="tools">
   <input class="search" id="q" type="search" placeholder="Ürün ara (ad, kod, marka)…" autocomplete="off">
   <div class="chips">
+    <button class="chip" id="sortBtn" style="background:#fff8dc;border-color:#f0d27a">⇅ Çok satan</button>
     <button class="chip on" data-f="all">Tümü</button>
     <button class="chip" data-f="low">Kritik</button>
     <button class="chip" data-f="zero">Stokta yok</button>
@@ -288,6 +289,7 @@ const SUPABASE_KEY="sb_publishable_6z5xgxYkLnVUEohzc_nlHA_yXDkMcfU";
 const EMAIL_DOMAIN="erkatem.com";
 
 const $=id=>document.getElementById(id);
+let sortMode="pop";try{sortMode=localStorage.getItem("erkatem_sort")||"pop"}catch(e){}
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
 const PERM={cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
 let costs={};let costMeta={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
@@ -370,7 +372,7 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,sell_price,wolvox_qty,wolvox_at").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,sell_price,wolvox_qty,wolvox_at,pop_score").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
     items=all;
@@ -405,6 +407,7 @@ function render(){
   if(filter==="zero")arr=arr.filter(isZero);
   if(filter==="diff")arr=arr.filter(hasDiff);
   if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
+  else arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr")):((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
   if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Menü → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
@@ -418,8 +421,11 @@ function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")
 function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
-document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));render()});
+document.querySelectorAll(".chip[data-f]").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));render()});
 $("q").oninput=render;
+function sortLabel(){$("sortBtn").textContent=sortMode==="pop"?"⇅ Çok satan":"⇅ A–Z"}
+sortLabel();
+$("sortBtn").onclick=()=>{sortMode=sortMode==="pop"?"az":"pop";try{localStorage.setItem("erkatem_sort",sortMode)}catch(e){};sortLabel();render()};
 $("list").onclick=e=>{const r=e.target.closest(".row");if(r)showItem(r.dataset.id)};
 
 /* ---------- Ürün detay ---------- */
@@ -603,6 +609,7 @@ function renderPrice(){
   let arr=act.filter(i=>!q||norm(i.name+" "+(i.code||"")+" "+(i.brand||"")).includes(q));
   if(pFilter==="nosell")arr=arr.filter(i=>i.sell_price==null);
   if(pFilter==="nobuy")arr=arr.filter(i=>costs[i.id]==null);
+  arr.sort((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr"));
   $("pList").innerHTML=arr.length?arr.slice(0,pShown).map(i=>`<div class="prow" data-id="${esc(i.id)}">
     <div class="pn">${esc(i.name)}</div><div class="pc">${esc([i.code,i.brand,i.unit].filter(Boolean).join(" · "))}</div>
     <div class="pi"><div class="pf"><label>Alış ₺ 🔒</label><input data-k="buy" type="number" inputmode="decimal" step="0.01" value="${costs[i.id]??""}"></div>
