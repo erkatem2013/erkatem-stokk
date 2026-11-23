@@ -194,7 +194,7 @@ html,body{overscroll-behavior-y:none}
     <div class="fld"><label>Marka / grup</label><input id="fBrand" placeholder="ör. Mare"></div>
   </div>
   <div class="two">
-    <div class="fld"><label>Birim</label><select id="fUnit"><option>adet</option><option>koli</option><option>paket</option><option>bidon</option><option>kutu</option><option>torba</option><option>kg</option><option>lt</option><option>rulo</option></select></div>
+    <div class="fld"><label>Birim</label><select id="fUnit"><option>adet</option><option>koli</option><option>paket</option><option>bidon</option><option>kutu</option><option>torba</option><option>kg</option><option>lt</option><option>litre</option><option>rulo</option><option>metre</option><option>m2</option><option>düzine</option><option>kova</option><option>çift</option></select></div>
     <div class="fld"><label id="fQtyL">Mevcut miktar</label><input id="fQty" type="number" inputmode="decimal" value="0"></div>
   </div>
   <div class="fld"><label>Kritik seviye (altına düşünce uyar)</label><input id="fMin" type="number" inputmode="decimal" value="0"></div>
@@ -483,7 +483,7 @@ function showForm(item){
   editing=item||null;const full=can("add"),mgr=can("manage");
   $("fTitle").textContent=item?(full?"Ürünü düzenle":"Sayım: "+item.name):"Yeni ürün";
   $("fName").value=item?.name||"";$("fCode").value=item?.code||"";$("fBrand").value=item?.brand||"";
-  $("fUnit").value=item?.unit||"adet";$("fQty").value=item?(item.qty??0):0;$("fMin").value=item?(item.min_qty??0):0;$("fPas").checked=!!item?.passive;
+  {const u=item?.unit||"adet";if(![...$("fUnit").options].some(o=>o.value===u))$("fUnit").insertAdjacentHTML("beforeend",`<option>${esc(u)}</option>`);$("fUnit").value=u;}$("fQty").value=item?(item.qty??0):0;$("fMin").value=item?(item.min_qty??0):0;$("fPas").checked=!!item?.passive;
   ["fName","fCode","fBrand","fUnit","fMin"].forEach(x=>$(x).disabled=!full);
   $("pasBox").classList.toggle("hide",!mgr);
   $("priceBox").classList.toggle("hide",!can("price"));
