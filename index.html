@@ -351,7 +351,7 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div class="sug hide" id="dSug"></div>
   <div id="dLines"></div>
   <div class="tot" id="dTot"></div>
-  <div class="fld"><label id="dNoteL">Not (belgede görünür)</label><input id="dNote" placeholder="ör. Fiyatlara nakliye dahildir."></div>
+  <div class="fld"><label id="dNoteL">Not (belgede görünür)</label><input id="dNote" placeholder="İsteğe bağlı not"></div>
   <button class="btn pri" id="dSave">Kaydet</button>
   <div id="dOut"><button class="btn pri" id="dImg">🖼️ WhatsApp'a görsel olarak gönder</button><div class="two"><button class="btn sec" id="dPdf">🖨️ PDF / Yazdır</button><button class="btn sec" id="dWa">💬 Yazı olarak gönder</button></div></div>
   <button class="btn sec hide" id="dToOrder">📦 Siparişe çevir</button>
@@ -942,7 +942,7 @@ function renderDoc(){
   $("dMeta").innerHTML=(cdoc.id?`<span class="bdg ${esc(cdoc.status)}">${DST[cdoc.status]||cdoc.status}</span>${cdoc.created_at?" · "+new Date(cdoc.created_at).toLocaleDateString("tr-TR"):""}`:"Yeni")+
     (bs?`<div class="small" style="margin-top:4px">Ürünleri ve miktarları yaz, Kaydet'e bas. Fiyatları yönetici girecek.</div>`:np&&cdoc.status!=="teslim"?` · <span class="bdg np">💰 ${np} kalemde fiyat bekliyor</span>`:"");
   const locked=cdoc.status==="teslim";
-  $("dNoteL").textContent=bs?"Not":"Not (belgede görünür)";$("dNote").placeholder=bs?"ör. Acil, öğlene kadar":"ör. Fiyatlara nakliye dahildir.";
+  $("dNoteL").textContent=bs?"Not":"Not (belgede görünür)";$("dNote").placeholder=bs?"ör. Acil, öğlene kadar":"İsteğe bağlı not";
   $("dTot").classList.toggle("hide",bs);$("dOut").classList.toggle("hide",bs);
   if(bs){
     $("dLines").innerHTML=dlines.length?dlines.map((l,i)=>`<div class="ln" data-i="${i}"><div class="nm"><span>${i+1}. ${esc(l.name)}</span>${locked?"":`<button class="x" data-rm="${i}">✕</button>`}</div>
