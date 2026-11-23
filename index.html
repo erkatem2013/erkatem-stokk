@@ -109,6 +109,8 @@ html,body{overscroll-behavior-y:none}
 .sbar{position:sticky;top:0;z-index:2;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:10px 0 8px;margin-bottom:4px;border-bottom:1px solid var(--line)}
 .sbar .grab{margin:0}
 .xbtn{border:none;background:var(--k);color:var(--y);font-weight:800;font-size:15px;border-radius:999px;padding:9px 16px}
+.sm-k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.sm-k div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}.sm-k b{display:block;font-size:22px}.sm-k span{font-size:12px;color:var(--mut)}
+.sm-h{font-weight:800;margin:14px 0 6px}.sm-r{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}.sm-r .m{color:var(--mut);font-size:12.5px}
 .dl{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .dl .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}.dl .s{font-size:12.5px;color:var(--mut);margin-top:2px}
 .bdg{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
@@ -287,7 +289,8 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
     <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin:8px 0;font-size:15px">
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div>
-  <button class="btn pri hide" id="priceBtn" style="margin-top:14px">💰 Hızlı fiyat girişi</button>
+  <button class="btn pri hide" id="sumBtn" style="margin-top:14px">📊 Günlük özet</button>
+  <button class="btn pri hide" id="priceBtn" style="margin-top:8px">💰 Hızlı fiyat girişi</button>
   <button class="btn pri hide" id="cariBtn" style="margin-top:8px">📇 Cariler (müşteriler)</button>
   <button class="btn pri hide" id="docsBtn" style="margin-top:8px">📄 Teklif & Sipariş</button>
   <button class="btn pri hide" id="pickBtn" style="margin-top:8px">📦 Hazırlanacak siparişler</button>
@@ -382,6 +385,13 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
   <div id="pRes" style="margin-top:12px"></div>
   <div class="two hide" id="pMake"><button class="btn pri" data-mk2="siparis">📦 Sipariş oluştur</button><button class="btn sec" data-mk2="teklif">📄 Teklif oluştur</button></div>
 </div>
+<div class="sheet" id="shSum">
+  <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
+  <h2>📊 Günlük özet</h2>
+  <div style="display:flex;gap:8px;align-items:center;margin:6px 0 12px"><button class="chip" id="sumPrev">◀</button><input type="date" id="sumDay" style="flex:1;font-size:16px;padding:8px;border:1.5px solid var(--line);border-radius:9px"><button class="chip" id="sumNext">▶</button></div>
+  <div id="sumBody"></div>
+  <button class="btn sec hide" id="sumWa">💬 Özeti WhatsApp'a gönder</button>
+</div>
 <div id="printArea"></div>
 <div class="toast" id="toast"></div>
 
@@ -393,7 +403,7 @@ const EMAIL_DOMAIN="erkatem.com";
 const $=id=>document.getElementById(id);
 let sortMode="pop";try{sortMode=localStorage.getItem("erkatem_sort")||"pop"}catch(e){}
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
-const PERM={fixmove:["patron"],seeprice:["patron","yonetici","satis"],docs:["patron","yonetici"],pick:["patron","yonetici","depocu"],cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
+const PERM={sum:["patron"],fixmove:["patron"],seeprice:["patron","yonetici","satis"],docs:["patron","yonetici"],pick:["patron","yonetici","depocu"],cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
 let costs={};let costMeta={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
 const can=a=>!!me&&PERM[a].includes(me.role);
 const tl=n=>(n===null||n===undefined||n==="")?"":"₺"+Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -466,6 +476,7 @@ async function boot(){
   $("docsBtn").classList.toggle("hide",!can("docs"));
   $("pickBtn").classList.toggle("hide",!can("pick"));
   $("movesBtn").classList.toggle("hide",!can("fixmove"));
+  $("sumBtn").classList.toggle("hide",!can("sum"));
   view("mainView");
   await loadItems();
   loadCustomers();
@@ -525,7 +536,7 @@ function render(){
 }
 let lockY=0;
 function lockBody(on){const b=document.body;if(on&&!b.classList.contains("lock")){lockY=window.scrollY;b.style.top=(-lockY)+"px";b.classList.add("lock")}else if(!on&&b.classList.contains("lock")){b.classList.remove("lock");b.style.top="";window.scrollTo(0,lockY)}}
-function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
+function open(id){["shItem","shForm","shMenu","shPrice","shCari","shCust","shDocs","shDoc","shPick","shMoves","shPaste","shSum"].forEach(s=>$(s).classList.toggle("show",s===id));$("ov").classList.toggle("show",!!id);if(!id){cur=null;editing=null}}
 $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip[data-f]").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));render()});
@@ -1092,6 +1103,43 @@ $("dImg").onclick=async()=>{
     imgReady=docImgFile();$("dImg").textContent="📤 Görsel hazır, paylaşmak için dokun";return}
   try{shareImg(docImgFile())}catch(e){toast("Görsel oluşturulamadı")}
 };
+
+/* ---------- Günlük özet (patron) ---------- */
+let sumData=null;
+const todayTR=()=>new Date(Date.now()+3*3600e3).toISOString().slice(0,10);
+const KN={giris:"Giriş",cikis:"Çıkış",sayim:"Sayım"};
+$("sumBtn").onclick=()=>{open("shSum");$("sumDay").value=todayTR();loadSum()};
+$("sumDay").onchange=loadSum;
+const shiftDay=n=>{const d=new Date($("sumDay").value+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);$("sumDay").value=d.toISOString().slice(0,10);loadSum()};
+$("sumPrev").onclick=()=>shiftDay(-1);$("sumNext").onclick=()=>shiftDay(1);
+async function loadSum(){
+  $("sumBody").innerHTML=`<div class="small">Yükleniyor…</div>`;$("sumWa").classList.add("hide");
+  const {data,error}=await sb.rpc("daily_summary",{p_day:$("sumDay").value||null});
+  if(error){$("sumBody").innerHTML=`<div class="note">${esc(errTr(error.message))}</div>`;return}
+  sumData=data;const d=data,c=d.counts||{};
+  const r=(a,b,m)=>`<div class="sm-r"><div>${a}${m?`<div class="m">${m}</div>`:""}</div><div style="text-align:right;white-space:nowrap">${b}</div></div>`;
+  let h=`<div class="sm-k"><div><b>${c.cikis||0}</b><span>Çıkış</span></div><div><b>${c.giris||0}</b><span>Giriş</span></div><div><b>${c.sayim||0}</b><span>Sayım</span></div></div>`;
+  if(d.sales)h+=`<div class="tot"><div class="g" style="border:0;margin:0;padding:0;font-size:16px"><span>Satış (KDV hariç)</span><span style="white-space:nowrap">${money(d.sales)} ₺</span></div></div>`;
+  if(d.by_user.length)h+=`<div class="sm-h">👥 Kim ne yaptı</div>`+d.by_user.map(u=>r(esc(u.name),`<b>${u.n}</b> işlem`,[u.cikis?u.cikis+" çıkış":"",u.giris?u.giris+" giriş":"",u.sayim?u.sayim+" sayım":""].filter(Boolean).join(" · "))).join("");
+  if(d.critical.length)h+=`<div class="sm-h">⚠️ Kritiğe / sıfıra düşenler (${d.critical.length})</div>`+d.critical.map(i=>r(esc(i.item),`<b style="color:var(--red,#c00)">${fmt(i.qty)}</b> ${esc(i.unit||"")}`,i.min>0?"Kritik seviye: "+fmt(i.min):"")).join("");
+  const tk=d.teklif||{};
+  h+=`<div class="sm-h">📄 Teklif & sipariş</div>`+r("Verilen teklif",`${tk.n||0} adet${tk.total?" · "+money(tk.total)+" ₺":""}`)+r("Yeni sipariş",(d.siparis_new.length)+" adet",d.siparis_new.map(x=>esc(x.no+" "+(x.cust||""))).join(", "))
+    +r("Teslim edilen",(d.delivered.length)+" adet",d.delivered.map(x=>esc(x.no+" "+(x.cust||""))).join(", "))+r("Hazırlanmayı bekleyen",(d.open||0)+" sipariş");
+  if(d.unpriced.length)h+=`<div class="sm-h">💰 Fiyat bekleyen siparişler</div>`+d.unpriced.map(x=>r(esc(x.no+" · "+(x.cust||"Cari yok")),x.np+" kalem")).join("");
+  if(d.new_items&&d.new_items.n)h+=`<div class="sm-h">➕ Yeni eklenen ürün: ${d.new_items.n}</div>`+(d.new_items.n<=30?`<div class="small">${d.new_items.list.map(esc).join(", ")}</div>`:"");
+  if(d.moves.length)h+=`<div class="sm-h">🕘 Hareketler (${d.moves.length})</div>`+d.moves.map(m=>r(`${esc(m.item||"")}`,`<b>${m.delta>0?"+":""}${fmt(m.delta)}</b> ${esc(m.unit||"")}`,`${m.t} · ${KN[m.kind]||m.kind} · ${esc(m.user)}${m.cust?" · "+esc(m.cust):""}`)).join("");
+  else h+=`<div class="empty" style="margin-top:12px">Bu gün hareket yok.</div>`;
+  $("sumBody").innerHTML=h;$("sumWa").classList.remove("hide");
+}
+function sumText(){const d=sumData,c=d.counts||{},tk=d.teklif||{};
+  const L=[`*erkatem günlük özet ${new Date(d.day+"T12:00:00").toLocaleDateString("tr-TR")}*`,`Çıkış: ${c.cikis||0} · Giriş: ${c.giris||0} · Sayım: ${c.sayim||0}`];
+  if(d.sales)L.push(`Satış (KDV hariç): ${money(d.sales)} ₺`);
+  if(d.by_user.length){L.push("","*Kim ne yaptı*");d.by_user.forEach(u=>L.push(`- ${u.name}: ${u.n} işlem`))}
+  if(d.critical.length){L.push("","*Kritiğe düşenler*");d.critical.forEach(i=>L.push(`- ${i.item}: ${fmt(i.qty)} ${i.unit||""}`))}
+  L.push("",`Teklif: ${tk.n||0} · Yeni sipariş: ${d.siparis_new.length} · Teslim: ${d.delivered.length} · Bekleyen: ${d.open||0}`);
+  if(d.unpriced.length)L.push(`Fiyat bekleyen: ${d.unpriced.map(x=>x.no).join(", ")}`);
+  return L.join("\n")}
+$("sumWa").onclick=()=>{if(sumData)location.href="https://wa.me/?text="+encodeURIComponent(sumText())};
 
 /* ---------- WhatsApp ayrıştırıcı ---------- */
 // erkatem WhatsApp sipariş ayrıştırıcı
