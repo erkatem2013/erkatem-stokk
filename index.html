@@ -175,7 +175,11 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
     <div class="fld"><label id="fQtyL">Mevcut miktar</label><input id="fQty" type="number" inputmode="decimal" value="0"></div>
   </div>
   <div class="fld"><label>Kritik seviye (altına düşünce uyar)</label><input id="fMin" type="number" inputmode="decimal" value="0"></div>
-  <label class="chk"><input type="checkbox" id="fPas"> Pasif (satılmıyor, listede gizle)</label>
+  <div class="two hide" id="priceBox">
+    <div class="fld"><label>Satış fiyatı (₺)</label><input id="fSell" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+    <div class="fld"><label>Alış fiyatı (₺) 🔒</label><input id="fBuy" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+  </div>
+  <label class="chk" id="pasBox"><input type="checkbox" id="fPas"> Pasif (satılmıyor, listede gizle)</label>
   <button class="btn pri" id="fSave">Kaydet</button>
   <button class="btn del hide" id="fDel">Ürünü sil</button>
   <div class="confirm hide" id="delBox"><p>Bu ürün ve hareket geçmişi silinsin mi?</p><div class="two"><button class="btn sec" id="delNo">Vazgeç</button><button class="btn out" id="delYes">Evet, sil</button></div></div>
@@ -197,7 +201,7 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
       <button class="btn pri" id="nAdd">Çalışanı ekle</button>
       <div class="small" id="nMsg" style="margin-top:6px"></div>
     </div>
-    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, Excel yükle, giriş/çıkış, sayım<br><b>Depocu:</b> giriş, çıkış, sayım<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Erişim yok:</b> giriş yapsa da hiçbir şey göremez</div>
+    <div class="rolebox"><b>Patron:</b> her şey + ekip yönetimi<br><b>Yönetici:</b> ürün ekle/düzenle/sil, fiyatlar, Excel yükle, giriş/çıkış, sayım, depocu hareketlerini görür<br><b>Depocu:</b> ürün ekle, isim düzelt, giriş, çıkış, sayım<br><b>Satış:</b> sadece çıkış<br><b>İzleyici:</b> sadece görür<br><b>Erişim yok:</b> giriş yapsa da hiçbir şey göremez</div>
     <p class="small">Çalışanı ekledikten sonra ona site linkini, kullanıcı adını ve şifresini ilet. En fazla 10 çalışan eklenebilir.</p>
   </div>
   <div id="impSec" class="hide">
@@ -205,6 +209,7 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
     <p class="small">Wolvox'tan aldığın stok listesini (.xlsx veya .csv) seç. "Stok Kodu", "Stok Adı", "Birim", "Miktar", "Durumu" sütunları otomatik tanınır. Aynı stok kodlu ürün güncellenir, yeniler eklenir.</p>
     <label class="chk"><input type="checkbox" id="noQty" checked> Miktarları alma (sadece ürün listesi)</label>
     <label class="chk"><input type="checkbox" id="skipPas" checked> Pasif ürünleri alma</label>
+    <label class="chk"><input type="checkbox" id="withPrice"> Fiyatları da al (satış / alış fiyatı sütunları)</label>
     <input type="file" id="file" accept=".xlsx,.xls,.csv" style="margin:8px 0;font-size:15px">
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div>
@@ -222,9 +227,10 @@ const EMAIL_DOMAIN="erkatem.com";
 
 const $=id=>document.getElementById(id);
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
-const PERM={add:["patron","yonetici"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
-let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
+const PERM={manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
+let costs={};let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
 const can=a=>!!me&&PERM[a].includes(me.role);
+const tl=n=>(n===null||n===undefined||n==="")?"":"₺"+Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmt=n=>{n=Number(n)||0;return Number.isInteger(n)?n.toLocaleString("tr-TR"):n.toLocaleString("tr-TR",{maximumFractionDigits:2})};
 const norm=s=>(s||"").toString().toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/ı/g,"i");
 const esc=s=>(s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -298,10 +304,13 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,sell_price").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
-    items=all;render();
+    items=all;
+    costs={};
+    if(can("price")){for(let from=0;;from+=1000){const {data,error}=await sb.from("item_costs").select("item_id,buy_price").range(from,from+999);if(error||!data)break;data.forEach(c=>costs[c.item_id]=c.buy_price);if(data.length<1000)break}}
+    render();
   }catch(e){status("Liste yüklenemedi: "+esc(errTr(e.message)));$("list").innerHTML=""}
 }
 async function loadPeople(){
@@ -322,7 +331,7 @@ function render(){
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
     <div class="info"><div class="nm">${esc(i.name)}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
-    <div class="sub">${esc([i.code,i.brand].filter(Boolean).join(" · ")||"—")}</div></div>
+    <div class="sub">${esc([i.code,i.brand,tl(i.sell_price)].filter(Boolean).join(" · ")||"—")}</div></div>
     <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div></div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
 }
@@ -337,12 +346,12 @@ const KIND={giris:"Giriş",cikis:"Çıkış",sayim:"Sayım"};
 async function showItem(id,keep){
   cur=items.find(i=>i.id===id);if(!cur)return;
   $("iName").textContent=cur.name;
-  $("iMeta").textContent=[cur.code,cur.brand,cur.min_qty?("Kritik: "+fmt(cur.min_qty)+" "+(cur.unit||"")):""].filter(Boolean).join(" · ")||" ";
+  $("iMeta").textContent=[cur.code,cur.brand,cur.sell_price!=null?"Satış: "+tl(cur.sell_price):"",can("price")&&costs[cur.id]!=null?"Alış: "+tl(costs[cur.id]):"",cur.min_qty?("Kritik: "+fmt(cur.min_qty)+" "+(cur.unit||"")):""].filter(Boolean).join(" · ")||" ";
   $("iQty").textContent=fmt(cur.qty);$("iUnit").textContent=cur.unit||"adet";
   $("iBig").classList.toggle("low",isLow(cur)||isZero(cur));
   $("moveBox").classList.toggle("hide",!(can("in")||can("out")));
   $("bIn").classList.toggle("hide",!can("in"));$("bOut").classList.toggle("hide",!can("out"));
-  $("bEdit").classList.toggle("hide",!can("count"));$("bEdit").textContent=can("add")?"Düzenle":"Sayım (miktarı düzelt)";
+  $("bEdit").classList.toggle("hide",!can("count"));$("bEdit").textContent=can("add")?"Düzenle / sayım":"Sayım (miktarı düzelt)";
   if(!keep){$("mAmt").value=1;$("mNote").value="";open("shItem")}
   $("iLog").innerHTML=`<h3>Son hareketler</h3><div class="small">Yükleniyor…</div>`;
   const {data}=await sb.from("moves").select("delta,after_qty,kind,note,user_id,created_at").eq("item_id",id).order("created_at",{ascending:false}).limit(30);
@@ -368,35 +377,50 @@ $("bOut").onclick=()=>{const a=Number($("mAmt").value);if(!(a>0))return toast("M
 
 /* ---------- Ürün formu ---------- */
 function showForm(item){
-  editing=item||null;const full=can("add");
+  editing=item||null;const full=can("add"),mgr=can("manage");
   $("fTitle").textContent=item?(full?"Ürünü düzenle":"Sayım: "+item.name):"Yeni ürün";
   $("fName").value=item?.name||"";$("fCode").value=item?.code||"";$("fBrand").value=item?.brand||"";
   $("fUnit").value=item?.unit||"adet";$("fQty").value=item?(item.qty??0):0;$("fMin").value=item?(item.min_qty??0):0;$("fPas").checked=!!item?.passive;
-  ["fName","fCode","fBrand","fUnit","fMin","fPas"].forEach(x=>$(x).disabled=!full);
+  ["fName","fCode","fBrand","fUnit","fMin"].forEach(x=>$(x).disabled=!full);
+  $("pasBox").classList.toggle("hide",!mgr);
+  $("priceBox").classList.toggle("hide",!can("price"));
+  $("fSell").value=item?.sell_price??"";$("fBuy").value=item&&costs[item.id]!=null?costs[item.id]:"";
   $("fQtyL").textContent=item?"Sayılan miktar":"Mevcut miktar";
-  $("fDel").classList.toggle("hide",!(item&&full));$("delBox").classList.add("hide");
+  $("fDel").classList.toggle("hide",!(item&&mgr));$("delBox").classList.add("hide");
   open("shForm");
 }
 $("fab").onclick=()=>showForm(null);
 $("bEdit").onclick=()=>showForm(cur);
+const numOrNull=v=>{v=String(v).trim();if(v==="")return null;const n=Number(v.replace(",","."));return isFinite(n)?n:null};
+async function saveCost(id){
+  if(!can("price"))return;
+  const b=numOrNull($("fBuy").value);
+  if(b===(costs[id]??null))return;
+  const {error}=await sb.from("item_costs").upsert({item_id:id,buy_price:b,updated_at:new Date().toISOString()});
+  if(error)throw error;costs[id]=b;
+}
 $("fSave").onclick=async()=>{
-  if(busy)return;const full=can("add");const qty=Number($("fQty").value)||0;
+  if(busy)return;const full=can("add"),mgr=can("manage"),pr=can("price");const qty=Number($("fQty").value)||0;
   const name=$("fName").value.trim();if(!name)return toast("Ürün adı gerekli");
   $("fSave").disabled=true;
   try{
+    const fields={name,code:$("fCode").value.trim()||null,brand:$("fBrand").value.trim()||null,unit:$("fUnit").value,min_qty:Number($("fMin").value)||0};
+    if(mgr)fields.passive=$("fPas").checked;
+    if(pr)fields.sell_price=numOrNull($("fSell").value);
     if(editing){
       const id=editing.id;
       if(full){
-        const patch={name,code:$("fCode").value.trim()||null,brand:$("fBrand").value.trim()||null,unit:$("fUnit").value,min_qty:Number($("fMin").value)||0,passive:$("fPas").checked};
-        const {error}=await sb.from("items").update(patch).eq("id",id);if(error)throw error;
-        Object.assign(items.find(i=>i.id===id)||{},patch);
+        const {error}=await sb.from("items").update(fields).eq("id",id);if(error)throw error;
+        Object.assign(items.find(i=>i.id===id)||{},fields);
+        await saveCost(id);
       }
       if(Number(editing.qty)!==qty){cur=items.find(i=>i.id===id);await move("sayim",qty,"Sayım düzeltmesi")}
       else toast("Güncellendi");
     }else{
-      const {data,error}=await sb.from("items").insert({name,code:$("fCode").value.trim()||null,brand:$("fBrand").value.trim()||null,unit:$("fUnit").value,qty:0,min_qty:Number($("fMin").value)||0,passive:$("fPas").checked}).select().single();
+      const {data,error}=await sb.from("items").insert({...fields,qty:0}).select().single();
       if(error)throw error;
       items.push(data);
+      await saveCost(data.id);
       if(qty){cur=data;await move("sayim",qty,"Açılış")}else toast("Eklendi");
     }
     render();open(null);
@@ -479,23 +503,35 @@ $("file").onchange=async e=>{
     const r0=rows[0];
     const cCode=findCol(r0,["stok kod","stok no","kod","code"]),cName=findCol(r0,["stok ad","urun ad","stok ismi","adi","name","aciklama"]),
       cUnit=findCol(r0,["birim","unit"]),cQty=findCol(r0,["miktar","kalan","mevcut","bakiye"]),cBrand=findCol(r0,["marka","grup","brand"]),
-      cPas=findCol(r0,["pasif"]),cSt=cPas?null:findCol(r0,["durum","aktif","kullanim"]);
+      cPas=findCol(r0,["pasif"]),cSt=cPas?null:findCol(r0,["durum","aktif","kullanim"]),
+      cSell=findCol(r0,["satis fiyat","liste fiyat","fiyat 1"]),cBuy=findCol(r0,["alis fiyat","maliyet"]);
+    const withPrice=$("withPrice").checked;
     if(!cName){$("impTxt").textContent="'Stok Adı' sütunu bulunamadı. Başlıklar: "+Object.keys(r0).join(", ");return}
     const noQty=$("noQty").checked,skipPas=$("skipPas").checked;
     const isPas=r=>cPas?TRUE.includes(norm(String(r[cPas]).trim())):cSt?PASSIVE.includes(norm(String(r[cSt]).trim())):false;
     let recs=rows.map(r=>{const o={name:String(r[cName]).trim().slice(0,200),code:cCode?String(r[cCode]).trim()||null:null,
       unit:cUnit?(String(r[cUnit]).trim().toLocaleLowerCase("tr-TR")||"adet"):"adet",brand:cBrand?String(r[cBrand]).trim()||null:null,passive:isPas(r)};
-      if(!noQty)o.qty=cQty?num(r[cQty]):0;return o}).filter(r=>r.name);
+      if(!noQty)o.qty=cQty?num(r[cQty]):0;
+      if(withPrice&&cSell)o.sell_price=num(r[cSell])||null;
+      if(withPrice&&cBuy)Object.defineProperty(o,"_buy",{value:num(r[cBuy])||null,enumerable:false});
+      return o}).filter(r=>r.name);
     const pasN=recs.filter(r=>r.passive).length;
     if(skipPas)recs=recs.filter(r=>!r.passive);
     const byCode=new Map();const noCode=[];
     recs.forEach(r=>r.code?byCode.set(r.code,r):noCode.push(r));
     const withCode=[...byCode.values()];
-    const note=`${cSt||cPas?`Durum sütunu "${cSt||cPas}": ${pasN} pasif ${skipPas?"atlandı":"pasif olarak alındı"}`:"Durum sütunu yok, hepsi aktif sayıldı"}${noQty?" · Miktarlar alınmadı":""}`;
+    const note=`${cSt||cPas?`Durum sütunu "${cSt||cPas}": ${pasN} pasif ${skipPas?"atlandı":"pasif olarak alındı"}`:"Durum sütunu yok, hepsi aktif sayıldı"}${noQty?" · Miktarlar alınmadı":""}${withPrice?(cSell||cBuy?` · Fiyat sütunları: ${[cSell,cBuy].filter(Boolean).join(", ")}`:" · Fiyat sütunu bulunamadı"):""}`;
     const total=withCode.length+noCode.length;let done=0;
     const step=async(batch,upsert)=>{
-      for(let t=0;t<3;t++){const q=upsert?sb.from("items").upsert(batch,{onConflict:"code"}):sb.from("items").insert(batch);
-        const {error}=await q;if(!error)return;if(t===2)throw error;await sleep(1500)}
+      for(let t=0;t<3;t++){const q=(upsert?sb.from("items").upsert(batch,{onConflict:"code"}):sb.from("items").insert(batch)).select("id");
+        const {data,error}=await q;
+        if(!error){
+          if(withPrice&&cBuy&&data&&data.length===batch.length){
+            const cs=data.map((d,k)=>({item_id:d.id,buy_price:batch[k]._buy??null})).filter(c=>c.buy_price!==null);
+            if(cs.length){const {error:ce}=await sb.from("item_costs").upsert(cs);if(ce)throw ce}
+          }
+          return}
+        if(t===2)throw error;await sleep(1500)}
     };
     for(let i=0;i<withCode.length;i+=500){await step(withCode.slice(i,i+500),true);done+=Math.min(500,withCode.length-i);
       $("impBar").style.width=(done/total*100)+"%";$("impTxt").textContent=`${note}\n${done}/${total} ürün işlendi`}
