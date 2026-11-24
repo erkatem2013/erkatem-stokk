@@ -460,7 +460,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 19:20</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 20:35</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -723,7 +723,9 @@ function render(){
   }
   if(filter==="diff")arr=arr.filter(hasDiff);
   if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
-  else if(filter!=="flag"&&!(filter==="low"&&qSort!=="date"))arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr")):((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
+  else if(filter!=="flag"&&!(filter==="low"&&qSort!=="date"))arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr"))
+    :sortMode==="asc"||sortMode==="desc"?((a,b)=>((Number(a.qty)||0)-(Number(b.qty)||0))*(sortMode==="asc"?1:-1)||(b.pop_score||0)-(a.pop_score||0))
+    :((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
   if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Daha → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
@@ -761,9 +763,9 @@ function voice(inp,btn,after){
   }catch(e){btn.classList.remove("on");inp.focus();toast("Klavyedeki 🎤 tuşuna basıp konuşabilirsin")}
 }
 $("qMic").onclick=()=>voice($("q"),$("qMic"),render);
-function sortLabel(){$("sortBtn").textContent=sortMode==="pop"?"⇅ Çok satan":"⇅ A–Z"}
+function sortLabel(){$("sortBtn").textContent={pop:"⇅ Çok satan",az:"⇅ A–Z",asc:"⇅ Azdan çoğa",desc:"⇅ Çoktan aza"}[sortMode]||"⇅ Çok satan"}
 sortLabel();
-$("sortBtn").onclick=()=>{sortMode=sortMode==="pop"?"az":"pop";try{localStorage.setItem("erkatem_sort",sortMode)}catch(e){};sortLabel();render()};
+$("sortBtn").onclick=()=>{const o=["pop","az","asc","desc"];sortMode=o[(o.indexOf(sortMode)+1)%o.length];try{localStorage.setItem("erkatem_sort",sortMode)}catch(e){};sortLabel();render()};
 $("list").onclick=e=>{const r=e.target.closest(".row");if(r)showItem(r.dataset.id)};
 
 /* ---------- Ürün detay ---------- */
