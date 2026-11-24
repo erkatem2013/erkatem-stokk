@@ -153,6 +153,15 @@ input.sugg{color:#1f6feb;background:#eef5ff}
 .pa-tot div{display:flex;justify-content:space-between;padding:3px 0}
 .pa-tot .g{font-weight:900;font-size:13pt;border-top:2px solid #111;margin-top:4px;padding-top:6px}
 .pa-n{margin-top:16px;font-size:9.5pt;line-height:1.5}
+.ki{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.kcb{flex:0 0 28px;height:28px;border-radius:8px;border:2px solid #ccc;background:#fff;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0;color:#111}
+.kcb.on{background:var(--y);border-color:var(--y)}
+.kb{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.kb b{display:block;font-size:14px;line-height:1.25}.kb span{font-size:12.5px;color:var(--mut)}.kb em{font-style:normal;font-weight:800;color:#111}
+.kn{font-size:12px;font-weight:700;background:var(--bg);border-radius:8px;padding:4px 7px;color:#444;white-space:nowrap}
+.ksum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.ksum div{background:var(--bg);border-radius:12px;padding:9px;text-align:center}.ksum b{display:block;font-size:17px}.ksum span{font-size:11.5px;color:var(--mut)}
+.kchart{background:var(--bg);border-radius:14px;padding:10px;margin-bottom:6px}.kchart .l{font-size:12px;color:var(--mut);margin-bottom:4px}
+.kh{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}.kh span:nth-child(2){color:var(--mut)}
 .lg .ed{border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px;margin-left:6px}
 .medit{background:#fffbeb;border:1px solid #f0d27a;border-radius:12px;padding:10px;margin:6px 0 10px}
 .medit .g{display:flex;gap:6px}.medit .g>div{flex:1;min-width:0}
@@ -377,7 +386,7 @@ header{padding:calc(10px + env(safe-area-inset-top)) 16px 12px;border-bottom:4px
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 23.11 · 21:50 · yeni arayüz</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 17:10</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -409,13 +418,22 @@ header{padding:calc(10px + env(safe-area-inset-top)) 16px 12px;border-bottom:4px
   <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="kName"></h2>
   <div class="meta" id="kMeta"></div>
+  <div class="chips" style="margin:2px 0 10px"><button class="chip on" data-kt="buys">🛒 Aldığı ürünler</button><button class="chip" data-kt="info">Bilgiler</button></div>
+  <div id="kBuysBox">
+    <input class="search" id="kq" type="search" placeholder="Ürün ara: cam, eldiven, poşet…" autocomplete="off" style="margin-bottom:6px">
+    <div id="kList"></div>
+    <div id="kAct" class="hide" style="position:sticky;bottom:0;background:#fff;padding:10px 0 4px;border-top:1px solid var(--line)">
+      <div class="two"><button class="btn pri" id="kMkS" style="margin:0">📦 Sipariş oluştur</button><button class="btn sec" id="kMkT" style="margin:0">📄 Teklif</button></div>
+    </div>
+  </div>
+  <div id="kInfoBox" class="hide">
   <div class="fld"><label>Cari adı</label><input id="kN"></div>
   <div class="two"><div class="fld"><label>Cari kodu</label><input id="kCode"></div><div class="fld"><label>Telefon</label><input id="kPhone" inputmode="tel"></div></div>
   <div class="fld"><label>Adres</label><input id="kAddr"></div>
   <div class="two"><div class="fld"><label>İl / ilçe</label><input id="kCity"></div><div class="fld"><label>Vergi dairesi</label><input id="kTaxO"></div></div>
   <div class="two"><div class="fld"><label>Vergi no</label><input id="kTaxN" inputmode="numeric"></div><div class="fld"><label>Not</label><input id="kNote"></div></div>
   <button class="btn pri" id="kSave">Kaydet</button>
-  <div class="log" id="kBuys"></div>
+  </div>
 </div>
 <div class="sheet" id="shDocs">
   <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
@@ -656,6 +674,24 @@ $("list").onclick=e=>{const r=e.target.closest(".row");if(r)showItem(r.dataset.i
 /* ---------- Ürün detay ---------- */
 const KIND={giris:"Giriş",cikis:"Çıkış",sayim:"Sayım"};
 const dts=d=>new Date(d).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"2-digit"});
+let buyAll=false;
+async function loadBuyers(id){
+  $("iSales").innerHTML=`<h3>👥 Kimler aldı</h3><div class="small">Yükleniyor…</div>`;
+  const {data,error}=await sb.rpc("item_buyers",{p_item:id});
+  if(!cur||cur.id!==id)return;
+  if(error||!data||!data.length){$("iSales").innerHTML=error?"":`<h3>👥 Kimler aldı</h3><div class="small">Bu ürünün kayıtlı satışı yok.</div>`;return}
+  const ps=data.map(x=>x.last_price).filter(x=>x!=null).map(Number);
+  const rng=ps.length?` · son fiyatlar ${tl(Math.min(...ps))} – ${tl(Math.max(...ps))}`:"";
+  const show=buyAll?data:data.slice(0,12);
+  $("iSales").innerHTML=`<h3>👥 Kimler aldı (${fmt(data.length)} cari${rng})</h3>`+show.map(b=>`<div class="ki"><button class="kb" data-bcid="${esc(b.customer_id)}"><b>${esc(b.name)}</b><span>Son: ${dtk(b.last_d)} · ${fmt(b.last_qty)} ${esc(cur.unit||"")}${b.last_price!=null?` · <em>${tl(b.last_price)}</em>`:""}</span></button><span class="kn">${fmt(b.n)}×</span></div>`).join("")
+    +(data.length>show.length?`<button class="btn sec" id="bAll" style="margin-top:8px">Tümünü göster (${fmt(data.length)})</button>`:"");
+}
+$("iSales").onclick=async e=>{
+  if(e.target.closest("#bAll")){buyAll=true;return loadBuyers(cur.id)}
+  const b=e.target.closest("[data-bcid]");if(!b)return;const itemId=cur.id;
+  if(!customers.length)await loadCustomers();if(!Object.keys(cinfo).length)await loadCinfo();
+  showCust(b.dataset.bcid,itemId);
+};
 async function loadSales(id){
   const {data}=await sb.from("moves").select("unit_price,delta,created_at,customer_id").eq("item_id",id).eq("kind","cikis").not("unit_price","is",null).order("created_at",{ascending:false}).limit(10);
   if(!cur||cur.id!==id)return;
@@ -684,7 +720,7 @@ async function showItem(id,keep){
   $("bEdit").classList.toggle("hide",!can("count"));
   $("mPriceBox").classList.toggle("hide",!can("seeprice"));$("mLast").classList.toggle("hide",!can("seeprice"));$("iSales").classList.toggle("hide",!can("seeprice"));$("bEdit").textContent=can("add")?"Düzenle / sayım":"Sayım (miktarı düzelt)";
   if(!keep){$("mAmt").value=1;$("mNote").value="";$("mCust").value="";$("mPrice").value=cur.sell_price??"";$("mLast").textContent="";open("shItem")}
-  loadSales(id);
+  buyAll=false;if(can("cari"))loadBuyers(id);else loadSales(id);
   $("iLog").innerHTML=`<h3>Son hareketler</h3><div class="small">Yükleniyor…</div>`;
   const {data}=await sb.from("moves").select("id,item_id,delta,after_qty,kind,note,user_id,created_at,customer_id,unit_price,edited_at").eq("item_id",id).order("created_at",{ascending:false}).limit(30);
   if(!cur||cur.id!==id)return;
@@ -898,17 +934,70 @@ function renderCari(){
   $("cMore").classList.toggle("hide",arr.length<=cShown);
 }
 $("cList").onclick=e=>{const r=e.target.closest("[data-cid]");if(r)showCust(r.dataset.cid)};
-async function showCust(id){
+let kRows=[],kSel=new Set(),kTab="buys";
+function kSetTab(t){kTab=t;document.querySelectorAll("[data-kt]").forEach(b=>b.classList.toggle("on",b.dataset.kt===t));$("kBuysBox").classList.toggle("hide",t!=="buys");$("kInfoBox").classList.toggle("hide",t!=="info")}
+document.querySelectorAll("[data-kt]").forEach(b=>b.onclick=()=>kSetTab(b.dataset.kt));
+const dtk=d=>{const x=String(d).slice(0,10).split("-");return `${+x[2]}.${x[1]}.${x[0]}`};
+async function showCust(id,itemId){
   const c=customers.find(x=>x.id===id);if(!c)return;curCust=c;const i=cinfo[id]||{};
   $("kName").textContent=c.name;$("kMeta").textContent=c.code?"Kod: "+c.code:"";
   $("kN").value=c.name;$("kCode").value=c.code||"";$("kPhone").value=i.phone||"";$("kAddr").value=i.address||"";$("kCity").value=i.city||"";$("kTaxO").value=i.tax_office||"";$("kTaxN").value=i.tax_no||"";$("kNote").value=i.note||"";
-  open("shCust");
-  $("kBuys").innerHTML=`<h3>Son alımları</h3><div class="small">Yükleniyor…</div>`;
-  const {data}=await sb.from("moves").select("item_id,delta,unit_price,created_at").eq("customer_id",id).eq("kind","cikis").order("created_at",{ascending:false}).limit(30);
+  kSel=new Set();kRows=[];$("kq").value="";kSetTab("buys");open("shCust");
+  $("kList").innerHTML=`<div class="small">Yükleniyor…</div>`;$("kAct").classList.add("hide");
+  const {data,error}=await sb.rpc("cust_items",{p_customer:id});
   if(curCust!==c)return;
-  const nm=iid=>(items.find(x=>x.id===iid)||{}).name||"Ürün";
-  $("kBuys").innerHTML=(data&&data.length)?`<h3>Son alımları</h3>`+data.map(l=>`<div class="lg"><div>${esc(nm(l.item_id))}<div class="d">${dts(l.created_at)} · ${fmt(-l.delta)} adet</div></div><div><b>${tl(l.unit_price)}</b></div></div>`).join(""):`<h3>Son alımları</h3><div class="small">Henüz kayıtlı satış yok.</div>`;
+  if(error){$("kList").innerHTML=`<div class="small">${esc(errTr(error.message))}</div>`;return}
+  kRows=data||[];
+  $("kMeta").textContent=[c.code?"Kod: "+c.code:"",kRows.length?`${fmt(kRows.length)} farklı ürün almış`:""].filter(Boolean).join(" · ");
+  if(itemId)return kDetail(itemId);
+  kRender();
 }
+function kRender(){
+  $("kq").classList.remove("hide");
+  const q=norm($("kq").value.trim());const arr=kRows.filter(r=>!q||norm(r.name).includes(q));
+  $("kList").innerHTML=arr.length?arr.slice(0,200).map(r=>`<div class="ki"><button class="kcb${kSel.has(r.item_id)?" on":""}" data-ksel="${esc(r.item_id)}" aria-label="Seç">${kSel.has(r.item_id)?"✓":""}</button>
+    <button class="kb" data-kit="${esc(r.item_id)}"><b>${esc(r.name)}</b><span>Son: ${dtk(r.last_d)} · ${fmt(r.last_qty)} ${esc(r.unit||"")}${r.last_price!=null?` · <em>${tl(r.last_price)}</em>`:""}</span></button><span class="kn">${fmt(r.n)}×</span></div>`).join("")
+    :`<div class="empty">${kRows.length?"Bu aramada ürün yok.":"Bu cariye kayıtlı satış yok."}</div>`;
+  kAct();
+}
+function kAct(){const n=kSel.size;$("kAct").classList.toggle("hide",!n);$("kMkS").textContent=`📦 Sipariş (${n})`;$("kMkT").textContent=`📄 Teklif (${n})`}
+$("kq").oninput=kRender;
+$("kList").onclick=e=>{
+  const b=e.target.closest("[data-ksel]");if(b){const id=b.dataset.ksel;kSel.has(id)?kSel.delete(id):kSel.add(id);b.classList.toggle("on",kSel.has(id));b.textContent=kSel.has(id)?"✓":"";kAct();return}
+  const d=e.target.closest("[data-kit]");if(d)return kDetail(d.dataset.kit);
+  if(e.target.closest("#kBack"))return kRender();
+  const t=e.target.closest("#kTog");if(t){const id=t.dataset.id;kSel.has(id)?kSel.delete(id):kSel.add(id);t.textContent=kSel.has(id)?"✓ Seçildi":"➕ Siparişe seç";kAct();return}
+  const w=e.target.closest("#kWho");if(w){open(null);return showItem(w.dataset.id)}
+};
+async function kDetail(itemId){
+  const c=curCust;const r=kRows.find(x=>x.item_id===itemId)||{name:(items.find(i=>i.id===itemId)||{}).name||"Ürün",unit:""};
+  $("kq").classList.add("hide");$("kList").innerHTML=`<div class="small">Yükleniyor…</div>`;
+  const {data,error}=await sb.rpc("cust_item_hist",{p_customer:c.id,p_item:itemId});
+  if(curCust!==c)return;if(error){$("kList").innerHTML=esc(errTr(error.message));return}
+  const h=data||[];const tot=h.reduce((a,x)=>a+Number(x.qty||0),0);const pr=h.filter(x=>x.price!=null).slice().reverse();
+  let chart="";
+  if(pr.length>=2){const W=320,H=100,ps=pr.map(x=>Number(x.price)),mn=Math.min(...ps),mx=Math.max(...ps),rg=(mx-mn)||1;
+    const pts=ps.map((v,i)=>`${(10+i*(W-20)/(ps.length-1)).toFixed(1)},${(H-12-(v-mn)/rg*(H-24)).toFixed(1)}`);
+    const last=pts[pts.length-1].split(",");
+    chart=`<div class="kchart"><div class="l">Fiyat · ${dtk(pr[0].d)} ${tl(ps[0])} → ${dtk(pr[pr.length-1].d)} ${tl(ps[ps.length-1])} · en düşük ${tl(mn)}, en yüksek ${tl(mx)}</div>
+      <svg width="100%" height="90" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="#111" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline></svg></div>`}
+  $("kList").innerHTML=`<button class="chip" id="kBack" style="margin:0 0 8px">← Tüm ürünler</button>
+    <h3 style="margin:2px 0 0;font-size:16px">${esc(r.name)}</h3>
+    <div class="ksum"><div><b>${fmt(h.length)}</b><span>satış</span></div><div><b>${fmt(tot)}</b><span>${esc(r.unit||"toplam")}</span></div><div><b>${h[0]&&h[0].price!=null?tl(h[0].price):"—"}</b><span>son fiyat</span></div></div>
+    ${chart}
+    ${h.map(x=>`<div class="kh"><span>${dtk(x.d)}</span><span>${fmt(x.qty)} ${esc(x.unit||r.unit||"")}</span><b>${x.price!=null?tl(x.price):"—"}</b></div>`).join("")}
+    <div class="two" style="margin-top:12px"><button class="btn sec" id="kTog" data-id="${esc(itemId)}" style="margin:0">${kSel.has(itemId)?"✓ Seçildi":"➕ Siparişe seç"}</button><button class="btn sec" id="kWho" data-id="${esc(itemId)}" style="margin:0">👥 Kimler aldı?</button></div>`;
+  kAct();
+}
+async function kMake(kind){
+  const c=curCust;if(!c||!kSel.size)return;
+  const lines=[];kRows.filter(r=>kSel.has(r.item_id)).forEach(r=>{const it=items.find(i=>i.id===r.item_id)||{};
+    lines.push({item_id:r.item_id,name:it.name||r.name,unit:it.unit||r.unit,qty:Number(r.last_qty)||1,price:r.last_price!=null?Number(r.last_price):(it.sell_price??null),vat:Number(it.vat??20),pos:lines.length,picked:false})});
+  dKind=kind;document.querySelectorAll("[data-dk]").forEach(x=>x.classList.toggle("on",x.dataset.dk===dKind));$("newDoc").textContent=dKind==="teklif"?"+ Yeni teklif":"+ Yeni sipariş";
+  await openDoc(null);dlines=lines;$("dCust").value=c.name;renderDoc();
+  toast(`${lines.length} kalem son miktar ve fiyatıyla eklendi. Kontrol edip Kaydet'e bas.`);
+}
+$("kMkS").onclick=()=>kMake("siparis");$("kMkT").onclick=()=>kMake("teklif");
 $("kSave").onclick=async()=>{
   if(!curCust)return;const name=$("kN").value.trim();if(!name)return toast("Cari adı gerekli");
   $("kSave").disabled=true;
