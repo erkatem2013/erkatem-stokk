@@ -330,6 +330,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <button class="chip" data-f="zero">Stokta yok <i id="cZero"></i></button>
     <button class="chip" data-f="diff">Wolvox farkı</button>
     <button class="chip" data-f="recent">Son hareket</button>
+    <button class="chip" data-f="flag">⚠️ Azaldı <i id="cFlag"></i></button>
     <button class="chip" data-f="passive">Pasif</button>
   </div>
 </div>
@@ -377,6 +378,8 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <div class="fld"><input id="mNote" placeholder="Not (isteğe bağlı)" maxlength="120"></div>
     <div class="inout"><button class="in" id="bIn">▲ Giriş</button><button class="out" id="bOut">▼ Çıkış</button></div>
   </div>
+  <button class="btn sec hide" id="bFlag" style="margin-bottom:4px"></button>
+  <div class="small hide" id="iFlag" style="text-align:center;margin:2px 0 6px;color:#b45309;font-weight:700"></div>
   <div class="log" id="iLog"></div>
   </div>
   <div id="itS" class="hide"><div class="log" id="iSales" style="margin-top:4px"></div></div>
@@ -454,7 +457,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 18:10</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 18:25</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -672,7 +675,7 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat,last_sale").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat,last_sale,min_auto,low_at,low_by").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
     items=all;
@@ -703,18 +706,19 @@ async function loadPeople(){
 function render(){
   const act=items.filter(i=>!i.passive);
   $("sCount").textContent=fmt(act.length);$("sLow").textContent=fmt(act.filter(isLow).length);$("sZero").textContent=fmt(act.filter(isZero).length);
-  {const l=act.filter(isLow).length,z=act.filter(isZero).length;$("cLow").textContent=l?fmt(l):"";$("cZero").textContent=z?fmt(z):""}
+  {const l=act.filter(isLow).length,z=act.filter(isZero).length,f=act.filter(i=>i.low_at).length;$("cLow").textContent=l?fmt(l):"";$("cZero").textContent=z?fmt(z):"";$("cFlag").textContent=f?fmt(f):""}
   const q=norm($("q").value.trim());
   let arr=items.filter(i=>filter==="passive"?i.passive:!i.passive).filter(i=>!q||norm(i.name+" "+(i.code||"")+" "+(i.brand||"")).includes(q));
   if(filter==="low")arr=arr.filter(isLow);
   if(filter==="zero")arr=arr.filter(isZero);
+  if(filter==="flag")arr=arr.filter(i=>i.low_at).sort((a,b)=>(b.low_at||"").localeCompare(a.low_at||""));
   if(filter==="diff")arr=arr.filter(hasDiff);
   if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
   else arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr")):((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
   if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Daha → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
-    <div class="info"><div class="nm">${esc(i.name)}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
+    <div class="info"><div class="nm">${esc(i.name)}${i.low_at?'<span class="tag" style="background:#f59e0b">AZALDI</span>':""}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
     <div class="sub">${esc([i.code,i.brand,tl(i.sell_price)].filter(Boolean).join(" · ")||"—")}</div></div>
     <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div>${i.wolvox_qty!=null?`<div class="w${hasDiff(i)?" df":""}">Wolvox ${fmt(i.wolvox_qty)}</div>`:""}</div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
@@ -766,11 +770,22 @@ function setITab(t){
   if(t==="b")renderInfo();
 }
 document.querySelectorAll("#iTabBar [data-itab]").forEach(b=>b.onclick=()=>setITab(b.dataset.itab));
+function flagUI(){
+  if(!cur)return;const on=!!cur.low_at;$("bFlag").classList.toggle("hide",!can("count"));
+  $("bFlag").textContent=on?"✓ Azaldı işaretini kaldır":"⚠️ Azaldı olarak işaretle";
+  const who=cur.low_by&&people[cur.low_by]?(people[cur.low_by].full_name||people[cur.low_by].username):"";
+  $("iFlag").classList.toggle("hide",!on);$("iFlag").textContent=on?`⚠️ ${who?who+" ":""}${dtk(cur.low_at)} tarihinde "azaldı" dedi · girişte kendiliğinden kalkar`:"";
+}
+$("bFlag").onclick=async()=>{if(!cur)return;const on=!cur.low_at;$("bFlag").disabled=true;
+  const {error}=await sb.rpc("flag_low",{p_item:cur.id,p_on:on});$("bFlag").disabled=false;
+  if(error)return toast(errTr(error.message));
+  cur.low_at=on?new Date().toISOString():null;cur.low_by=on?me.id:null;flagUI();render();toast(on?"⚠️ Azaldı olarak işaretlendi":"İşaret kaldırıldı")};
 function renderInfo(){
   if(!cur)return;const cm=costMeta[cur.id];const sup=cm&&cm.last_buy_supplier?(customers.find(c=>c.code===cm.last_buy_supplier)||{}).name||cm.last_buy_supplier:"";
-  const R=[["Stok kodu",cur.code],["Marka / grup",cur.brand],["Birim",cur.unit],["Kritik seviye",cur.min_qty?fmt(cur.min_qty)+" "+(cur.unit||""):"Yok"]];
+  const R=[["Stok kodu",cur.code],["Marka / grup",cur.brand],["Birim",cur.unit],["Kritik seviye",cur.min_qty?fmt(cur.min_qty)+" "+(cur.unit||"")+(cur.min_auto?" (otomatik)":" (elle)"):"Yok"]];
   if(can("seeprice"))R.push(["Satış fiyatı",cur.sell_price!=null?tl(cur.sell_price):"Girilmemiş"]);
   if(can("price")&&costs[cur.id]!=null)R.push(["Son alış",tl(costs[cur.id])+(cm&&cm.last_buy_at?" · "+dtk(cm.last_buy_at):"")+(sup?" · "+sup:"")]);
+  if(cur.min_auto)R.push(["Kritik nasıl?","Son 3 ayın aylık satışının %25'i, her pazartesi güncellenir"]);
   R.push(["Son satış",cur.last_sale?dtk(cur.last_sale):"—"],["Son hareket",cur.last_move?new Date(cur.last_move).toLocaleString("tr-TR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"—"],["Durum",cur.passive?"Pasif":"Aktif"]);
   $("iInfo").innerHTML=R.map(([a,b])=>`<div class="ifo"><span>${esc(a)}</span><b>${esc(b||"—")}</b></div>`).join("");
 }
@@ -834,6 +849,7 @@ async function showItem(id,keep){
   document.querySelector('#iTabBar [data-itab="s"]').classList.toggle("hide",!can("seeprice"));
   document.querySelector('#iTabBar [data-itab="a"]').classList.toggle("hide",!can("cari"));
   if(!keep)setITab("h");else if(itab!=="h")setITab(itab);
+  flagUI();
   $("iLog").innerHTML=`<h3>Son hareketler</h3><div class="small">Yükleniyor…</div>`;
   const {data}=await sb.from("moves").select("id,item_id,delta,after_qty,kind,note,user_id,created_at,customer_id,unit_price,edited_at").eq("item_id",id).order("created_at",{ascending:false}).limit(30);
   if(!cur||cur.id!==id)return;
@@ -1504,18 +1520,19 @@ async function loadPano(){
     if(can("docs"))T.push({k:"np",n:np,l:"Fiyat bekleyen sipariş",hot:np>0,red:np>0});
     else T.push({k:"mine",n:mine,l:"Senin yazdığın liste"})}
   const low=act.filter(isLow).length;T.push({k:"low",n:low,l:"Kritik stok",red:low>0});
+  const fl=act.filter(i=>i.low_at).length;if(fl)T.splice(1,0,{k:"flag",n:fl,l:"Azaldı denen ürün",hot:true});
   if(sm){const c=sm.counts||{};T.push({k:"sum",n:c.cikis||0,l:`Bugün çıkış · ${c.giris||0} giriş · ${c.sayim||0} sayım`})}
   else if(tk!=null)T.push({k:"tk",n:tk,l:"Açık teklif"});
   else{const z=act.filter(isZero).length;T.push({k:"zero",n:z,l:"Stokta yok",red:z>0})}
   if(tk!=null&&sm&&T.length<4)T.push({k:"tk",n:tk,l:"Açık teklif"});
-  $("pano").innerHTML=T.slice(0,4).map(t=>`<button class="pt${t.hot?" hot":""}${t.red?" red":""}" data-pk2="${t.k}"><b>${fmt(t.n)}</b><span>${esc(t.l)}</span></button>`).join("");
+  $("pano").innerHTML=T.slice(0,6).map(t=>`<button class="pt${t.hot?" hot":""}${t.red?" red":""}" data-pk2="${t.k}"><b>${fmt(t.n)}</b><span>${esc(t.l)}</span></button>`).join("");
   $("pano").classList.toggle("hide",!T.length);
 }
 $("pano").onclick=e=>{const b=e.target.closest("[data-pk2]");if(!b)return;const k=b.dataset.pk2;
   if(k==="pick"||k==="mine")return $("pickBtn").click();
   if(k==="np"||k==="tk"){dKind=k==="np"?"siparis":"teklif";open("shDocs");document.querySelectorAll("[data-dk]").forEach(x=>x.classList.toggle("on",x.dataset.dk===dKind));$("newDoc").textContent=dKind==="teklif"?"+ Yeni teklif":"+ Yeni sipariş";return loadDocs()}
   if(k==="sum")return $("sumBtn").click();
-  const f=k==="low"?"low":"zero";const c=document.querySelector(`[data-f="${f}"]`);if(c){c.click();$("q").scrollIntoView({behavior:"smooth"})}};
+  const f=k==="low"?"low":k==="flag"?"flag":"zero";const c=document.querySelector(`[data-f="${f}"]`);if(c){c.click();$("q").scrollIntoView({behavior:"smooth"})}};
 
 /* ---------- Bildirimler (web push) ---------- */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
