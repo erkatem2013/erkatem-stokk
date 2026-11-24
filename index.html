@@ -115,6 +115,7 @@ html,body{overscroll-behavior-y:none}
 .sbar .grab{margin:0}
 .xbtn{border:none;background:var(--k);color:var(--y);font-weight:800;font-size:15px;border-radius:999px;padding:9px 16px}
 .sm-k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.sm-k div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}.sm-k b{display:block;font-size:22px}.sm-k span{font-size:12px;color:var(--mut)}
+.sn{display:inline-block;min-width:26px;margin-right:6px;padding:1px 5px;border-radius:6px;background:var(--bg);color:#666;font-size:12px;font-weight:800;text-align:center}
 .sm-h{font-weight:800;margin:14px 0 6px}.sm-r{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}.sm-r .m{color:var(--mut);font-size:12.5px}
 input.sugg{color:#1f6feb;background:#eef5ff}
 .dl{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
@@ -386,7 +387,7 @@ header{padding:calc(10px + env(safe-area-inset-top)) 16px 12px;border-bottom:4px
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 17:10</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 17:30</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -1395,7 +1396,7 @@ async function loadSum(){
     +r("Teslim edilen",(d.delivered.length)+" adet",d.delivered.map(x=>esc(x.no+" "+(x.cust||""))).join(", "))+r("Hazırlanmayı bekleyen",(d.open||0)+" sipariş");
   if(d.unpriced.length)h+=`<div class="sm-h">💰 Fiyat bekleyen siparişler</div>`+d.unpriced.map(x=>r(esc(x.no+" · "+(x.cust||"Cari yok")),x.np+" kalem")).join("");
   if(d.new_items&&d.new_items.n)h+=`<div class="sm-h">➕ Yeni eklenen ürün: ${d.new_items.n}</div>`+(d.new_items.n<=30?`<div class="small">${d.new_items.list.map(esc).join(", ")}</div>`:"");
-  if(d.moves.length)h+=`<div class="sm-h">🕘 Hareketler (${d.moves.length})</div>`+d.moves.map(m=>r(`${esc(m.item||"")}`,`<b>${m.delta>0?"+":""}${fmt(m.delta)}</b> ${esc(m.unit||"")}`,`${m.t} · ${KN[m.kind]||m.kind} · ${esc(m.user)}${m.cust?" · "+esc(m.cust):""}`)).join("");
+  if(d.moves.length)h+=`<div class="sm-h">🕘 Hareketler (${d.moves.length})</div>`+d.moves.map((m,i)=>r(`<span class="sn">${i+1}</span>${esc(m.item||"")}`,`<b>${m.delta>0?"+":""}${fmt(m.delta)}</b> ${esc(m.unit||"")}`,`${m.t} · ${KN[m.kind]||m.kind} · ${esc(m.user)}${m.cust?" · "+esc(m.cust):""}`)).join("");
   else h+=`<div class="empty" style="margin-top:12px">Bu gün hareket yok.</div>`;
   $("sumBody").innerHTML=h;$("sumWa").classList.remove("hide");
 }
