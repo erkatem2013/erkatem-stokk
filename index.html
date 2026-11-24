@@ -387,7 +387,7 @@ header{padding:calc(10px + env(safe-area-inset-top)) 16px 12px;border-bottom:4px
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 17:30</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 17:45</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -675,19 +675,30 @@ $("list").onclick=e=>{const r=e.target.closest(".row");if(r)showItem(r.dataset.i
 /* ---------- Ürün detay ---------- */
 const KIND={giris:"Giriş",cikis:"Çıkış",sayim:"Sayım"};
 const dts=d=>new Date(d).toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"2-digit"});
-let buyAll=false;
+let buyAll=false,iTab="sales";
+const iTabs=()=>`<div class="chips" style="margin:0 0 6px"><button class="chip${iTab==="sales"?" on":""}" data-it="sales">👥 Kimler aldı</button><button class="chip${iTab==="buys"?" on":""}" data-it="buys">🚚 Alışlar</button></div>`;
+async function loadPurch(id){
+  $("iSales").innerHTML=iTabs()+`<div class="small">Yükleniyor…</div>`;
+  const {data,error}=await sb.rpc("item_purchases",{p_item:id});
+  if(!cur||cur.id!==id||iTab!=="buys")return;
+  if(error||!data||!data.length){$("iSales").innerHTML=iTabs()+`<div class="small" style="padding:8px 0">${error?esc(errTr(error.message)):"Bu ürünün kayıtlı alışı yok."}</div>`;return}
+  const ps=data.map(x=>x.price).filter(x=>x!=null).map(Number);
+  $("iSales").innerHTML=iTabs()+`<div class="small" style="margin:2px 0 4px">${fmt(data.length)} alış${ps.length?` · ${tl(Math.min(...ps))} – ${tl(Math.max(...ps))}`:""}</div>`
+    +data.map(b=>`<div class="ki"><div class="kb"><b>${esc(b.supplier||"Tedarikçi belirsiz")}</b><span>${dtk(b.d)} · ${fmt(b.qty)} ${esc(b.unit||cur.unit||"")}${b.src==="site"?" · sitede girildi":""}</span></div><span style="font-weight:800;white-space:nowrap">${b.price!=null?tl(b.price):"—"}</span></div>`).join("");
+}
 async function loadBuyers(id){
-  $("iSales").innerHTML=`<h3>👥 Kimler aldı</h3><div class="small">Yükleniyor…</div>`;
+  $("iSales").innerHTML=iTabs()+`<div class="small">Yükleniyor…</div>`;
   const {data,error}=await sb.rpc("item_buyers",{p_item:id});
-  if(!cur||cur.id!==id)return;
-  if(error||!data||!data.length){$("iSales").innerHTML=error?"":`<h3>👥 Kimler aldı</h3><div class="small">Bu ürünün kayıtlı satışı yok.</div>`;return}
+  if(!cur||cur.id!==id||iTab!=="sales")return;
+  if(error||!data||!data.length){$("iSales").innerHTML=iTabs()+`<div class="small" style="padding:8px 0">${error?esc(errTr(error.message)):"Bu ürünün kayıtlı satışı yok."}</div>`;return}
   const ps=data.map(x=>x.last_price).filter(x=>x!=null).map(Number);
   const rng=ps.length?` · son fiyatlar ${tl(Math.min(...ps))} – ${tl(Math.max(...ps))}`:"";
   const show=buyAll?data:data.slice(0,12);
-  $("iSales").innerHTML=`<h3>👥 Kimler aldı (${fmt(data.length)} cari${rng})</h3>`+show.map(b=>`<div class="ki"><button class="kb" data-bcid="${esc(b.customer_id)}"><b>${esc(b.name)}</b><span>Son: ${dtk(b.last_d)} · ${fmt(b.last_qty)} ${esc(cur.unit||"")}${b.last_price!=null?` · <em>${tl(b.last_price)}</em>`:""}</span></button><span class="kn">${fmt(b.n)}×</span></div>`).join("")
+  $("iSales").innerHTML=iTabs()+`<div class="small" style="margin:2px 0 4px">${fmt(data.length)} cari${rng}</div>`+show.map(b=>`<div class="ki"><button class="kb" data-bcid="${esc(b.customer_id)}"><b>${esc(b.name)}</b><span>Son: ${dtk(b.last_d)} · ${fmt(b.last_qty)} ${esc(cur.unit||"")}${b.last_price!=null?` · <em>${tl(b.last_price)}</em>`:""}</span></button><span class="kn">${fmt(b.n)}×</span></div>`).join("")
     +(data.length>show.length?`<button class="btn sec" id="bAll" style="margin-top:8px">Tümünü göster (${fmt(data.length)})</button>`:"");
 }
 $("iSales").onclick=async e=>{
+  const t=e.target.closest("[data-it]");if(t){iTab=t.dataset.it;return iTab==="buys"?loadPurch(cur.id):loadBuyers(cur.id)}
   if(e.target.closest("#bAll")){buyAll=true;return loadBuyers(cur.id)}
   const b=e.target.closest("[data-bcid]");if(!b)return;const itemId=cur.id;
   if(!customers.length)await loadCustomers();if(!Object.keys(cinfo).length)await loadCinfo();
@@ -721,7 +732,7 @@ async function showItem(id,keep){
   $("bEdit").classList.toggle("hide",!can("count"));
   $("mPriceBox").classList.toggle("hide",!can("seeprice"));$("mLast").classList.toggle("hide",!can("seeprice"));$("iSales").classList.toggle("hide",!can("seeprice"));$("bEdit").textContent=can("add")?"Düzenle / sayım":"Sayım (miktarı düzelt)";
   if(!keep){$("mAmt").value=1;$("mNote").value="";$("mCust").value="";$("mPrice").value=cur.sell_price??"";$("mLast").textContent="";open("shItem")}
-  buyAll=false;if(can("cari"))loadBuyers(id);else loadSales(id);
+  buyAll=false;iTab="sales";if(can("cari"))loadBuyers(id);else loadSales(id);
   $("iLog").innerHTML=`<h3>Son hareketler</h3><div class="small">Yükleniyor…</div>`;
   const {data}=await sb.from("moves").select("id,item_id,delta,after_qty,kind,note,user_id,created_at,customer_id,unit_price,edited_at").eq("item_id",id).order("created_at",{ascending:false}).limit(30);
   if(!cur||cur.id!==id)return;
@@ -1390,13 +1401,16 @@ async function loadSum(){
   let h=`<div class="sm-k"><div><b>${c.cikis||0}</b><span>Çıkış</span></div><div><b>${c.giris||0}</b><span>Giriş</span></div><div><b>${c.sayim||0}</b><span>Sayım</span></div></div>`;
   if(d.sales)h+=`<div class="tot"><div class="g" style="border:0;margin:0;padding:0;font-size:16px"><span>Satış (KDV hariç)</span><span style="white-space:nowrap">${money(d.sales)} ₺</span></div></div>`;
   if(d.by_user.length)h+=`<div class="sm-h">👥 Kim ne yaptı</div>`+d.by_user.map(u=>r(esc(u.name),`<b>${u.n}</b> işlem`,[u.cikis?u.cikis+" çıkış":"",u.giris?u.giris+" giriş":"",u.sayim?u.sayim+" sayım":""].filter(Boolean).join(" · "))).join("");
+  const sc={};d.moves.filter(m=>m.kind==="sayim").forEach(m=>{(sc[m.item]=sc[m.item]||[]).push(m)});
+  const dup=Object.entries(sc).filter(([k,v])=>v.length>1);
+  if(dup.length)h+=`<div class="sm-h">🔁 Birden fazla sayılan ürünler (${dup.length})</div>`+dup.map(([k,v])=>{const o=v.slice().reverse();return r(esc(k),`<b>${o.length} kez</b>`,o.map((m,j)=>`${j+1}. ${m.t} ${esc(m.user)}: ${fmt(m.after)} ${esc(m.unit||"")}`).join(" → "))}).join("");
   if(d.critical.length)h+=`<div class="sm-h">⚠️ Kritiğe / sıfıra düşenler (${d.critical.length})</div>`+d.critical.map(i=>r(esc(i.item),`<b style="color:var(--red,#c00)">${fmt(i.qty)}</b> ${esc(i.unit||"")}`,i.min>0?"Kritik seviye: "+fmt(i.min):"")).join("");
   const tk=d.teklif||{};
   h+=`<div class="sm-h">📄 Teklif & sipariş</div>`+r("Verilen teklif",`${tk.n||0} adet${tk.total?" · "+money(tk.total)+" ₺":""}`)+r("Yeni sipariş",(d.siparis_new.length)+" adet",d.siparis_new.map(x=>esc(x.no+" "+(x.cust||""))).join(", "))
     +r("Teslim edilen",(d.delivered.length)+" adet",d.delivered.map(x=>esc(x.no+" "+(x.cust||""))).join(", "))+r("Hazırlanmayı bekleyen",(d.open||0)+" sipariş");
   if(d.unpriced.length)h+=`<div class="sm-h">💰 Fiyat bekleyen siparişler</div>`+d.unpriced.map(x=>r(esc(x.no+" · "+(x.cust||"Cari yok")),x.np+" kalem")).join("");
   if(d.new_items&&d.new_items.n)h+=`<div class="sm-h">➕ Yeni eklenen ürün: ${d.new_items.n}</div>`+(d.new_items.n<=30?`<div class="small">${d.new_items.list.map(esc).join(", ")}</div>`:"");
-  if(d.moves.length)h+=`<div class="sm-h">🕘 Hareketler (${d.moves.length})</div>`+d.moves.map((m,i)=>r(`<span class="sn">${i+1}</span>${esc(m.item||"")}`,`<b>${m.delta>0?"+":""}${fmt(m.delta)}</b> ${esc(m.unit||"")}`,`${m.t} · ${KN[m.kind]||m.kind} · ${esc(m.user)}${m.cust?" · "+esc(m.cust):""}`)).join("");
+  if(d.moves.length)h+=`<div class="sm-h">🕘 Hareketler (${d.moves.length})</div>`+d.moves.map((m,i)=>r(`<span class="sn">${i+1}</span>${esc(m.item||"")}${m.kind==="sayim"&&sc[m.item]&&sc[m.item].length>1?` <span class="bdg np">🔁 ${sc[m.item].length - sc[m.item].indexOf(m)}. sayım</span>`:""}`,`<b>${m.delta>0?"+":""}${fmt(m.delta)}</b> ${esc(m.unit||"")}`,`${m.t} · ${KN[m.kind]||m.kind} · ${esc(m.user)}${m.cust?" · "+esc(m.cust):""}`)).join("");
   else h+=`<div class="empty" style="margin-top:12px">Bu gün hareket yok.</div>`;
   $("sumBody").innerHTML=h;$("sumWa").classList.remove("hide");
 }
