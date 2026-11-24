@@ -178,6 +178,8 @@ textarea.paste{width:100%;min-height:140px;font-size:15px;padding:10px;border:1.
 .itabs{display:flex;gap:4px;background:var(--bg);border-radius:12px;padding:4px;margin:2px 0 12px;position:sticky;top:52px;z-index:2}
 .itabs button{flex:1;border:none;background:none;padding:9px 0;border-radius:9px;font-size:13.5px;font-weight:700;color:#555}
 .itabs button.on{background:var(--k);color:var(--y)}
+.dh{margin-top:6px;font-size:12.5px;color:#1f6feb;background:#eef5ff;border-radius:8px;padding:6px 8px}.dh u{font-weight:800}
+html.dark .dh{background:#10233f;color:#8ab4ff}
 .ifo{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14.5px}.ifo span{color:var(--mut)}.ifo b{text-align:right}
 /* sesli arama */
 .micb{flex:none;border:none;background:none;font-size:18px;padding:8px 6px;opacity:.7}.micb.on{opacity:1;animation:pulse 1s infinite}
@@ -457,7 +459,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 18:25</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 19:00</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -1299,7 +1301,7 @@ function custSuggest(inpId,boxId,onPick){
     inp.value=c.name;box.classList.add("hide");inp.dispatchEvent(new Event("input"));box.classList.add("hide");if(onPick)onPick(c)});
 }
 custSuggest("mCust","mCustSug");
-custSuggest("dCust","dCustSug");
+custSuggest("dCust","dCustSug",()=>renderDoc());
 
 /* ---------- Teklif & Sipariş ---------- */
 const COMPANY={name:"erkatem endüstriyel temizlik malzemeleri",addr:"Mahmutbey Mah. İstoç 20. Ada No: 86-88 Bağcılar / İstanbul",tel:"0212 659 46 91 (WhatsApp)",gsm:"0543 508 22 17",fax:"0212 659 46 93",mail:"info@erkatem.com",web:"www.erkatem.com"};
@@ -1365,8 +1367,9 @@ function renderDoc(){
     <div class="g"><div><label>Miktar (${esc(l.unit||"")})</label><input data-f="qty" type="number" inputmode="decimal" value="${l.qty??""}" ${locked?"disabled":""}></div>
     <div><label>Birim fiyat ₺</label><input data-f="price" type="number" inputmode="decimal" step="0.01" value="${l.price??""}" ${locked?"disabled":""}></div>
     <div style="flex:.6"><label>KDV %</label><select data-f="vat" ${locked?"disabled":""}>${[20,10,1,0].map(v=>`<option ${Number(l.vat)===v?"selected":""}>${v}</option>`).join("")}</select></div></div>
+    ${dHintHtml(l,i,locked)}
     <div class="s small" style="text-align:right;margin-top:4px">Tutar: <b>${money((l.qty||0)*(l.price||0))} ₺</b></div></div>`).join(""):`<div class="small" style="margin-bottom:8px">Henüz ürün eklenmedi. Yukarıdan ara ve dokun.</div>`;
-  renderTotals();
+  renderTotals();{const c=findCust($("dCust").value);if(((c&&c.id)||null)!==dHist.cid)loadDHist()}
     $("dSave").classList.toggle("hide",locked);
   $("dToOrder").classList.toggle("hide",!(k==="teklif"&&cdoc.id&&cdoc.status!=="siparis"));
   $("dDeliver").classList.toggle("hide",!(k==="siparis"&&cdoc.id&&!locked));
@@ -1377,14 +1380,30 @@ $("dLines").addEventListener("input",e=>{const inp=e.target.closest("[data-f]");
   dlines[i][f]=f==="vat"?Number(inp.value):numOrNull(inp.value);
   const l=dlines[i];const b=inp.closest(".ln").querySelector(".s b");if(!b)return;b.textContent=money((l.qty||0)*(l.price||0))+" ₺";renderTotals()});
 $("dLines").addEventListener("change",e=>{if(e.target.dataset.f==="vat")renderDoc()});
-$("dLines").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(b){dlines.splice(+b.dataset.rm,1);renderDoc()}});
+$("dLines").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(b){dlines.splice(+b.dataset.rm,1);renderDoc();return}
+  const a=e.target.closest("[data-ap]");if(a){const i=+a.dataset.ap,h=dHist.map[dlines[i].item_id];if(h&&h.last_price!=null){dlines[i].price=Number(h.last_price);renderDoc();toast("Son fiyat uygulandı")}}});
+/* carinin son satış fiyatı ipucu */
+let dHist={cid:null,map:{}};
+function dHintHtml(l,i,locked){
+  const h=l.item_id&&dHist.map[l.item_id];if(!h||h.last_price==null)return"";
+  const same=l.price!=null&&Number(l.price)===Number(h.last_price);
+  return `<div class="dh" ${locked||same?"":`data-ap="${i}"`}>↩ Bu cariye son satış: <b>${tl(h.last_price)}</b> · ${dtk(h.last_d)} · ${fmt(h.last_qty)} ${esc(l.unit||"")}${locked||same?"":` <u>uygula</u>`}</div>`;
+}
+async function loadDHist(){
+  const c=findCust($("dCust").value);const cid=c?c.id:null;
+  if(!can("cari")||BASIC()){dHist={cid,map:{}};return}
+  dHist={cid,map:{}};if(!cid){renderDoc();return}
+  const {data}=await sb.rpc("cust_items",{p_customer:cid});
+  if(dHist.cid!==cid)return;(data||[]).forEach(x=>dHist.map[x.item_id]=x);renderDoc();
+}
+$("dCust").addEventListener("change",()=>renderDoc());
 $("dAdd").oninput=()=>{const q=norm($("dAdd").value.trim());const box=$("dSug");
   if(q.length<2){box.classList.add("hide");return}
   const r=items.filter(i=>!i.passive&&norm(i.name+" "+(i.code||"")).includes(q)).sort((a,b)=>(b.pop_score||0)-(a.pop_score||0)).slice(0,8);
   box.innerHTML=r.length?r.map(i=>`<div data-add="${esc(i.id)}">${esc(i.name)} <span class="small">· ${esc(i.unit||"")}${i.sell_price!=null?" · "+tl(i.sell_price):""}</span></div>`).join(""):`<div class="small">Sonuç yok</div>`;box.classList.remove("hide")};
 $("dSug").onclick=async e=>{const r=e.target.closest("[data-add]");if(!r)return;const it=items.find(i=>i.id===r.dataset.add);if(!it)return;
   let price=BASIC()?null:(it.sell_price??null);const c=findCust($("dCust").value);
-  if(c&&!BASIC()){const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}
+  if(c&&!BASIC()){const h=dHist.cid===c.id&&dHist.map[it.id];if(h&&h.last_price!=null)price=Number(h.last_price);else{const l=await lastPriceFor(it.id,c.id);if(l)price=l.unit_price}}
   dlines.push({item_id:it.id,name:it.name,unit:it.unit,qty:1,price,vat:Number(it.vat??20),pos:dlines.length,picked:false});
   $("dAdd").value="";$("dSug").classList.add("hide");renderDoc();toast(price==null&&!BASIC()?"Eklendi, fiyat gir":"Eklendi")};
 async function saveDoc(){
