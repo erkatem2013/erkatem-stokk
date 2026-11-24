@@ -336,6 +336,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <button class="chip" data-f="passive">Pasif</button>
   </div>
 </div>
+<div id="qsBar" class="hide" style="padding:4px 14px 0"><button class="chip" id="qsBtn" style="margin:0"></button></div>
 <div id="status"></div>
 <div class="list" id="list"><div class="empty">Yükleniyor…</div></div>
 <button class="fab hide" id="fab" aria-label="Ürün ekle">+</button>
@@ -459,7 +460,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <div id="impBox" class="hide"><div class="prog"><div id="impBar"></div></div><div class="small" id="impTxt" style="white-space:pre-line"></div></div>
   </div></details>
   <button class="btn del" id="logoutBtn" style="margin-top:16px">Çıkış yap</button>
-  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 19:00</div>
+  <div class="small" style="text-align:center;margin-top:10px;color:#999">Sürüm 24.11 · 19:20</div>
 </div>
 
 <div class="sheet" id="shPrice">
@@ -714,9 +715,15 @@ function render(){
   if(filter==="low")arr=arr.filter(isLow);
   if(filter==="zero")arr=arr.filter(isZero);
   if(filter==="flag")arr=arr.filter(i=>i.low_at).sort((a,b)=>(b.low_at||"").localeCompare(a.low_at||""));
+  $("qsBar").classList.toggle("hide",!(filter==="flag"||filter==="low"));
+  if(filter==="flag"||filter==="low"){
+    if(filter==="low"&&qSort==="date")qSort="asc";
+    $("qsBtn").textContent=qSort==="asc"?"⇅ Miktar: azdan çoğa":qSort==="desc"?"⇅ Miktar: çoktan aza":"⇅ Son işaretlenen üstte";
+    if(qSort!=="date")arr.sort((a,b)=>((Number(a.qty)||0)-(Number(b.qty)||0))*(qSort==="asc"?1:-1)||(b.pop_score||0)-(a.pop_score||0));
+  }
   if(filter==="diff")arr=arr.filter(hasDiff);
   if(filter==="recent")arr=arr.filter(i=>i.last_move).sort((a,b)=>(b.last_move||"").localeCompare(a.last_move||"")).slice(0,50);
-  else arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr")):((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
+  else if(filter!=="flag"&&!(filter==="low"&&qSort!=="date"))arr.sort(sortMode==="pop"?((a,b)=>(b.pop_score||0)-(a.pop_score||0)||(a.name||"").localeCompare(b.name||"","tr")):((a,b)=>(a.name||"").localeCompare(b.name||"","tr")));
   if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Daha → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
@@ -741,6 +748,8 @@ $("ov").onclick=()=>open(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const wasPrice=$("shPrice").classList.contains("show");open(null);if(wasPrice)render()});
 document.querySelectorAll(".chip[data-f]").forEach(c=>c.onclick=()=>{filter=c.dataset.f;document.querySelectorAll(".chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));render()});
 $("q").oninput=render;
+let qSort="date";try{qSort=localStorage.getItem("erkatem_qsort")||"date"}catch(e){}
+$("qsBtn").onclick=()=>{const o=filter==="flag"?["date","asc","desc"]:["asc","desc"];qSort=o[(o.indexOf(qSort)+1)%o.length];try{localStorage.setItem("erkatem_qsort",qSort)}catch(e){};render()};
 function voice(inp,btn,after){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){inp.focus();toast("Klavyedeki 🎤 tuşuna basıp konuşabilirsin");return}
