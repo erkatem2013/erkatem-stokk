@@ -597,8 +597,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("show"),2600)}
 function status(h){$("status").innerHTML=h?`<div class="note">${h}</div>`:""}
 function view(v){["authView","waitView","mainView"].forEach(x=>$(x).classList.toggle("hide",x!==v))}
-const isLow=i=>(Number(i.min_qty)||0)>0&&(Number(i.qty)||0)<=(Number(i.min_qty)||0);
-const isZero=i=>(Number(i.qty)||0)<=0;
+const isCnt=i=>!!i.counted_at;
+const isLow=i=>isCnt(i)&&(Number(i.min_qty)||0)>0&&(Number(i.qty)||0)<=(Number(i.min_qty)||0);
+const isZero=i=>isCnt(i)&&(Number(i.qty)||0)<=0;
 const hasDiff=i=>i.wolvox_qty!=null&&Number(i.wolvox_qty)!==Number(i.qty||0);
 const errTr=m=>{m=m||"";
   if(/Invalid login/i.test(m))return "Kullanıcı adı veya şifre yanlış";
@@ -678,7 +679,7 @@ async function loadItems(){
   try{
     const all=[];
     for(let from=0;;from+=1000){
-      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat,last_sale,min_auto,low_at,low_by").order("name").range(from,from+999);
+      const {data,error}=await sb.from("items").select("id,code,name,brand,unit,qty,min_qty,passive,last_move,wolvox_qty,wolvox_at,pop_score,vat,last_sale,min_auto,low_at,low_by,counted_at").order("name").range(from,from+999);
       if(error)throw error;all.push(...data);if(data.length<1000)break;
     }
     items=all;
@@ -729,7 +730,7 @@ function render(){
   if(!items.length){$("list").innerHTML=`<div class="empty">Henüz ürün yok.${can("add")?"<br>Sağ alttaki <b>+</b> ile ürün ekle<br>ya da <b>Daha → Excel'den yükle</b>.":""}</div>`;return}
   if(!arr.length){$("list").innerHTML=`<div class="empty">Sonuç yok.</div>`;return}
   $("list").innerHTML=arr.slice(0,300).map(i=>`<div class="row ${isLow(i)||isZero(i)?"low":""}" data-id="${esc(i.id)}">
-    <div class="info"><div class="nm">${esc(i.name)}${i.low_at?'<span class="tag" style="background:#f59e0b">AZALDI</span>':""}${isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
+    <div class="info"><div class="nm">${esc(i.name)}${i.low_at?'<span class="tag" style="background:#f59e0b">AZALDI</span>':""}${!isCnt(i)?'<span class="tag" style="background:#9ca3af">SAYILMADI</span>':isZero(i)?'<span class="tag">YOK</span>':isLow(i)?'<span class="tag">KRİTİK</span>':""}</div>
     <div class="sub">${esc([i.code,i.brand,tl(i.sell_price)].filter(Boolean).join(" · ")||"—")}</div></div>
     <div class="qty"><div class="v">${fmt(i.qty)}</div><div class="u">${esc(i.unit||"adet")}</div>${i.wolvox_qty!=null?`<div class="w${hasDiff(i)?" df":""}">Wolvox ${fmt(i.wolvox_qty)}</div>`:""}</div></div>`).join("")+
     (arr.length>300?`<div class="empty">İlk 300 sonuç gösteriliyor, aramayı daralt.</div>`:"");
@@ -876,7 +877,7 @@ async function move(kind,amount,note,extra){
   try{
     const {data,error}=await sb.rpc("stock_move",{p_item:cur.id,p_kind:kind,p_amount:amount,p_note:note||null,...(extra||{})});
     if(error)throw error;
-    const it=items.find(i=>i.id===cur.id);if(it){it.qty=Number(data);it.last_move=new Date().toISOString()}
+    const it=items.find(i=>i.id===cur.id);if(it){it.qty=Number(data);it.last_move=new Date().toISOString();if(kind!=="cikis"&&!it.counted_at)it.counted_at=it.last_move}
     render();showItem(cur.id,true);
     toast(Number(data)<0?"Dikkat: stok eksiye düştü ("+fmt(data)+")":kind==="sayim"?"Sayım kaydedildi":(kind==="giris"?"Giriş: +":"Çıkış: −")+fmt(amount)+" "+(cur.unit||""));
     return true;
@@ -931,7 +932,7 @@ async function cntSave(){
   const it=C.it;if(!it||!C.val||busy)return;const v=Number(C.val.replace(",","."));if(!(v>=0))return toast("Geçerli bir sayı gir");
   busy=true;$("cntSave").disabled=true;
   try{const {data,error}=await sb.rpc("stock_move",{p_item:it.id,p_kind:"sayim",p_amount:v,p_note:"Sayım modu"});if(error)throw error;
-    it.qty=Number(data);it.last_move=new Date().toISOString();
+    it.qty=Number(data);it.last_move=new Date().toISOString();if(!it.counted_at)it.counted_at=it.last_move;
     const o=C.st[it.id];C.st[it.id]={item_id:it.id,last_at:new Date().toISOString(),last_qty:v,last_user:(me&&(me.full_name||me.username))||"",today_n:(o&&isToday(o.last_at)?o.today_n:0)+1};
     C.hist.push(it.id);toast(`✅ ${it.name}: ${fmt(v)} ${it.unit||""}`);cntProg();
     cntGo(C.q[C.i]&&C.q[C.i].id===it.id?C.i+1:C.i);
