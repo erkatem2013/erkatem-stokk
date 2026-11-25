@@ -1830,22 +1830,30 @@ document.querySelectorAll("[data-mk2]").forEach(b=>b.onclick=async()=>{
 });
 
 /* ---------- Depo: hazırlık ---------- */
-let pkDoc=null;
-$("pickBtn").onclick=()=>{open("shPick");loadPick()};
+let pkDoc=null,pkMode="open";
+$("pickBtn").onclick=()=>{pkMode="open";open("shPick");loadPick()};
 async function loadPick(){
-  pkDoc=null;$("kTitle").textContent="📦 Hazırlanacak siparişler";$("pkBody").innerHTML=`<div class="small">Yükleniyor…</div>`;
+  pkDoc=null;$("kTitle").textContent=pkMode==="done"?"✅ Teslim edilen siparişler":"📦 Hazırlanacak siparişler";$("pkBody").innerHTML=`<div class="small">Yükleniyor…</div>`;
+  const tabs=`<div class="chips" style="margin:0 0 10px"><button class="chip ${pkMode==="open"?"on":""}" data-pkm="open">Bekleyenler</button><button class="chip ${pkMode==="done"?"on":""}" data-pkm="done">Teslim edilenler</button></div>`;
+  if(pkMode==="done"){
+    const {data,error}=await sb.rpc("delivered_orders",{p_limit:60});
+    if(error){$("pkBody").innerHTML=tabs+`<div class="note">${esc(errTr(error.message))}</div>`;return}
+    $("pkBody").innerHTML=tabs+((data&&data.length)?data.map(o=>`<div class="dl" data-pk="${esc(o.id)}" data-no="${esc(o.no)}" data-cu="${esc(o.customer||"")}" data-done="1"><div class="t"><span>${esc(o.no)} · ${esc(o.customer||"Cari yok")}</span><span>${o.lines} kalem</span></div><div class="s">${o.delivered_at?new Date(o.delivered_at).toLocaleString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):""} · <span class="bdg teslim">${DST.teslim}</span></div></div>`).join(""):`<div class="empty">Teslim edilen sipariş yok.</div>`);
+    return;
+  }
   const {data,error}=await sb.rpc("open_orders");
-  if(error){$("pkBody").innerHTML=`<div class="note">${esc(errTr(error.message))}</div>`;return}
+  if(error){$("pkBody").innerHTML=tabs+`<div class="note">${esc(errTr(error.message))}</div>`;return}
   const bs=BASIC();
   const top=bs?`<div class="two" style="margin-bottom:12px"><button class="btn pri" id="pkNew" style="margin:0">📝 Liste yaz</button><button class="btn sec" id="pkPaste" style="margin:0">📋 WhatsApp'tan</button></div>`:"";
-  $("pkBody").innerHTML=top+((data&&data.length)?data.map(o=>`<div class="dl" data-pk="${esc(o.id)}" data-no="${esc(o.no)}" data-cu="${esc(o.customer||"")}" data-mine="${o.mine?1:""}"><div class="t"><span>${esc(o.no)} · ${esc(o.customer||"Cari yok")}</span><span>${o.picked}/${o.lines}</span></div><div class="s">${new Date(o.created_at).toLocaleDateString("tr-TR")} · <span class="bdg ${esc(o.status)}">${DST[o.status]}</span>${o.mine&&bs?` <span class="bdg taslak">✍️ Senin listen</span>`:""}${!bs&&o.unpriced>0?` <span class="bdg np">💰 Fiyat bekliyor (${o.unpriced})</span>`:""}</div></div>`).join(""):`<div class="empty">Hazırlanacak sipariş yok 👍</div>`);
+  $("pkBody").innerHTML=tabs+top+((data&&data.length)?data.map(o=>`<div class="dl" data-pk="${esc(o.id)}" data-no="${esc(o.no)}" data-cu="${esc(o.customer||"")}" data-mine="${o.mine?1:""}"><div class="t"><span>${esc(o.no)} · ${esc(o.customer||"Cari yok")}</span><span>${o.picked}/${o.lines}</span></div><div class="s">${new Date(o.created_at).toLocaleDateString("tr-TR")} · <span class="bdg ${esc(o.status)}">${DST[o.status]}</span>${o.mine&&bs?` <span class="bdg taslak">✍️ Senin listen</span>`:""}${!bs&&o.unpriced>0?` <span class="bdg np">💰 Fiyat bekliyor (${o.unpriced})</span>`:""}</div></div>`).join(""):`<div class="empty">Hazırlanacak sipariş yok 👍</div>`);
 }
 $("pkBody").addEventListener("click",async e=>{
   if(e.target.id==="pkNew"){dKind="siparis";return openDoc(null)}
+  const pm=e.target.closest("[data-pkm]");if(pm){pkMode=pm.dataset.pkm;return loadPick()}
   if(e.target.id==="pkPaste")return openPaste();
   if(e.target.id==="pkEdit")return openBasic(pkDoc.id);
   if(e.target.id==="pkOpen"){const {data,error}=await sb.from("docs").select("*").eq("id",pkDoc.id).single();if(error)return toast(errTr(error.message));dKind="siparis";return openDoc(data)}
-  const o=e.target.closest("[data-pk]");if(o&&!pkDoc){pkDoc={id:o.dataset.pk,no:o.dataset.no,cu:o.dataset.cu,mine:!!o.dataset.mine};return showPick()}
+  const o=e.target.closest("[data-pk]");if(o&&!pkDoc){pkDoc={id:o.dataset.pk,no:o.dataset.no,cu:o.dataset.cu,mine:!!o.dataset.mine,done:!!o.dataset.done};return showPick()}
   if(e.target.id==="pkBack")return loadPick();
   if(e.target.id==="pkDeliver"){if(e.target.dataset.sure!=="1"){e.target.dataset.sure="1";e.target.textContent="Stoktan düşülecek, emin misin? Tekrar bas";return}
     const {data,error}=await sb.rpc("deliver_order",{p_doc:pkDoc.id});if(error)return toast("Olmadı: "+errTr(error.message));toast(`Teslim edildi, ${data} kalem stoktan düştü`);await loadItems();loadPick()}
@@ -1858,6 +1866,11 @@ async function showPick(){
   const {data,error}=await sb.rpc("pick_list",{p_doc:pkDoc.id});if(error)return toast(errTr(error.message));
   const ext=(data||[]).filter(l=>isExt(l.name));
   const bs=BASIC();
+  if(pkDoc.done){
+    $("pkBody").innerHTML=`<button class="chip" id="pkBack" style="margin-bottom:10px">← Teslim edilenler</button><div class="note">✅ Teslim edildi, stoktan düşüldü.</div>`+
+      (data||[]).map(l=>`<div class="pk"><div style="flex:1"><b>${fmt(l.qty)} ${esc(l.unit||"")}</b> · ${esc(l.name)}</div></div>`).join("");
+    return;
+  }
   $("pkBody").innerHTML=`<button class="chip" id="pkBack" style="margin-bottom:10px">← Siparişler</button>`+(bs&&pkDoc.mine?`<button class="chip" id="pkEdit" style="margin:0 0 10px 6px">✏️ Listeyi düzenle</button>`:"")+(!bs?`<button class="chip" id="pkOpen" style="margin:0 0 10px 6px">💰 Fiyatları gir / aç</button>`:"")+(ext.length?`<div class="note">🛒 Dışarıdan alınacak: ${ext.map(l=>esc(l.name)).join(", ")}</div>`:"")+
     (data||[]).map(l=>`<label class="pk ${l.picked?"done":""} ${isExt(l.name)?"ext":""}"><input type="checkbox" data-line="${esc(l.id)}" ${l.picked?"checked":""}><div style="flex:1"><b>${fmt(l.qty)} ${esc(l.unit||"")}</b> · ${esc(l.name)}</div></label>`).join("")+
     `<button class="btn in" id="pkDeliver" style="color:#fff">✅ Hepsi hazır, teslim edildi</button>`;
