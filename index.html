@@ -48,6 +48,8 @@ header{position:sticky;top:0;z-index:5;background:var(--k);color:#fff;padding:ca
 .qty .v{font-size:20px;font-weight:800}.qty .u{font-size:11.5px;color:var(--mut)}
 .row.low .qty .v{color:var(--red)}
 .tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:2px;background:var(--red);color:#fff}
+.bal{font-weight:900;font-size:15px;white-space:nowrap;text-align:right}.bal.b{color:var(--red)}.bal.a{color:var(--grn)}.bal small{display:block;font-size:10.5px;font-weight:700;color:var(--mut)}
+.cm{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}.cm.old{opacity:.45}.cm .d{color:var(--mut);font-size:12px}.cm b.p{color:var(--red)}.cm b.m{color:var(--grn)}
 .empty{text-align:center;color:var(--mut);padding:40px 20px;font-size:15px;line-height:1.5}
 .note{margin:8px 14px;padding:10px 12px;border-radius:10px;background:#fff6d6;font-size:13.5px;color:#6b5200}
 .fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:6;width:62px;height:62px;border-radius:50%;border:none;background:var(--y);color:var(--k);font-size:34px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25)}
@@ -479,6 +481,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
   <h2>📇 Cariler</h2>
   <div class="meta" id="cStat"></div>
   <input class="search" id="cq" type="search" placeholder="Cari ara (ad, kod, telefon)…" autocomplete="off" style="margin-bottom:8px">
+  <div class="chips" style="margin:0 0 8px"><button class="chip on" data-cf="all">Tümü</button><button class="chip" data-cf="borc">Borçlular</button><button class="chip" data-cf="alacak">Alacaklılar</button></div>
   <div id="cList"></div>
   <button class="btn sec hide" id="cMore">Daha fazla göster</button>
   <div class="rolebox" style="margin-top:14px">
@@ -487,18 +490,31 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <input type="file" id="cFile" accept=".xlsx,.xls,.csv" style="font-size:15px">
     <div class="small" id="cImp" style="white-space:pre-line;margin-top:6px"></div>
   </div>
+  <div class="rolebox" style="margin-top:10px">
+    <b>💰 Wolvox'tan cari bakiyeleri yükle</b>
+    <p class="small" style="margin:6px 0">Wolvox'ta cari bakiye listesini Excel'e aktar ("Ticari Unvanı", "Bakiye", "B/A/S" sütunları). Yüklenen bakiye o anki açılış bakiyesi olur; sitede bundan sonra teslim edilen siparişler borç olarak eklenir, tahsilatlar düşer. Tekrar yüklersen eski açılış yenisiyle değişir.</p>
+    <input type="file" id="bFile" accept=".xlsx,.xls,.csv" style="font-size:15px">
+    <div class="small" id="bImp" style="white-space:pre-line;margin-top:6px"></div>
+  </div>
 </div>
 <div class="sheet" id="shCust">
   <div class="sbar"><div class="grab"></div><button class="xbtn" data-close>✕ Kapat</button></div>
   <h2 id="kName"></h2>
   <div class="meta" id="kMeta"></div>
-  <div class="chips" style="margin:2px 0 10px"><button class="chip on" data-kt="buys">🛒 Aldığı ürünler</button><button class="chip" data-kt="info">Bilgiler</button></div>
+  <div class="chips" style="margin:2px 0 10px"><button class="chip on" data-kt="buys">🛒 Aldığı ürünler</button><button class="chip" data-kt="bal">💰 Bakiye</button><button class="chip" data-kt="info">Bilgiler</button></div>
   <div id="kBuysBox">
     <input class="search" id="kq" type="search" placeholder="Ürün ara: cam, eldiven, poşet…" autocomplete="off" style="margin-bottom:6px">
     <div id="kList"></div>
     <div id="kAct" class="hide" style="position:sticky;bottom:0;background:#fff;padding:10px 0 4px;border-top:1px solid var(--line)">
       <div class="two"><button class="btn pri" id="kMkS" style="margin:0">📦 Sipariş oluştur</button><button class="btn sec" id="kMkT" style="margin:0">📄 Teklif</button></div>
     </div>
+  </div>
+  <div id="kBalBox" class="hide">
+    <div class="big" style="padding:6px 0 10px"><div class="v" id="kBal">—</div><div class="u" id="kBalT"></div></div>
+    <div class="two"><div class="fld"><label>Tutar (₺)</label><input id="kAmt" type="number" inputmode="decimal" placeholder="0,00"></div><div class="fld"><label>Açıklama</label><input id="kAmtN" placeholder="Nakit, havale, fatura…"></div></div>
+    <div class="two"><button class="btn pri" id="kTah" style="margin:0">➖ Tahsilat al</button><button class="btn sec" id="kBor" style="margin:0">➕ Borç ekle</button></div>
+    <div class="small" style="margin:8px 0 4px">Teslim edilen siparişler (KDV dahil) otomatik borç yazılır. Soluk satırlar Wolvox bakiyesine zaten dahil.</div>
+    <div id="kMoves"></div>
   </div>
   <div id="kInfoBox" class="hide">
   <div class="fld"><label>Cari adı</label><input id="kN"></div>
@@ -1125,19 +1141,27 @@ $("pList").addEventListener("change",async e=>{
 /* ---------- Cariler ---------- */
 let cinfo={},cShown=50,curCust=null;
 async function loadCinfo(){cinfo={};for(let from=0;;from+=1000){const {data,error}=await sb.from("customer_info").select("*").range(from,from+999);if(error||!data)break;data.forEach(x=>cinfo[x.customer_id]=x);if(data.length<1000)break}}
-$("cariBtn").onclick=async()=>{cShown=50;open("shCari");$("cList").innerHTML=`<div class="small">Yükleniyor…</div>`;await Promise.all([loadCustomers(),loadCinfo()]);renderCari()};
+$("cariBtn").onclick=async()=>{cShown=50;open("shCari");$("cList").innerHTML=`<div class="small">Yükleniyor…</div>`;await Promise.all([loadCustomers(),loadCinfo(),loadBals()]);renderCari()};
 $("cq").oninput=()=>{cShown=50;renderCari()};
 $("cMore").onclick=()=>{cShown+=50;renderCari()};
+let bals={},cFilt="all";
+async function loadBals(){bals={};const {data,error}=await sb.rpc("cari_balances");if(!error)(data||[]).forEach(x=>bals[x.customer_id]=x)}
+const balHtml=id=>{const b=bals[id];if(!b||!Number(b.bakiye))return"";const v=Number(b.bakiye);return `<div class="bal ${v>0?"b":"a"}">${tl(Math.abs(v))}<small>${v>0?"borçlu":"alacaklı"}</small></div>`};
+document.querySelectorAll("[data-cf]").forEach(b=>b.onclick=()=>{cFilt=b.dataset.cf;document.querySelectorAll("[data-cf]").forEach(x=>x.classList.toggle("on",x===b));cShown=50;renderCari()});
 function renderCari(){
-  $("cStat").textContent=`${fmt(customers.length)} cari`;
+  const bv=id=>Number((bals[id]||{}).bakiye)||0;
+  const tb=Object.values(bals).reduce((a,x)=>a+Math.max(0,Number(x.bakiye)||0),0),ta=Object.values(bals).reduce((a,x)=>a+Math.max(0,-(Number(x.bakiye)||0)),0);
+  $("cStat").innerHTML=`${fmt(customers.length)} cari`+(tb||ta?` · Alacağımız <b style="color:var(--red)">${tl(tb)}</b>`+(ta?` · Borcumuz <b style="color:var(--grn)">${tl(ta)}</b>`:""):"");
   const q=norm($("cq").value.trim());
-  const arr=customers.filter(c=>!q||norm(c.name+" "+(c.code||"")+" "+((cinfo[c.id]||{}).phone||"")).includes(q));
-  $("cList").innerHTML=arr.length?arr.slice(0,cShown).map(c=>{const i=cinfo[c.id]||{};return `<div class="row" data-cid="${esc(c.id)}"><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">${esc([c.code,i.phone,i.city].filter(Boolean).join(" · ")||"—")}</div></div></div>`}).join(""):`<div class="empty">Cari yok. Aşağıdan Wolvox listesini yükle.</div>`;
+  let arr=customers.filter(c=>!q||norm(c.name+" "+(c.code||"")+" "+((cinfo[c.id]||{}).phone||"")).includes(q));
+  if(cFilt==="borc")arr=arr.filter(c=>bv(c.id)>0).sort((a,b)=>bv(b.id)-bv(a.id));
+  if(cFilt==="alacak")arr=arr.filter(c=>bv(c.id)<0).sort((a,b)=>bv(a.id)-bv(b.id));
+  $("cList").innerHTML=arr.length?arr.slice(0,cShown).map(c=>{const i=cinfo[c.id]||{};return `<div class="row" data-cid="${esc(c.id)}"><div class="info"><div class="nm">${esc(c.name)}</div><div class="sub">${esc([c.code,i.phone,i.city].filter(Boolean).join(" · ")||"—")}</div></div>${balHtml(c.id)}</div>`}).join(""):`<div class="empty">${cFilt==="all"?"Cari yok. Aşağıdan Wolvox listesini yükle.":"Bu filtrede cari yok."}</div>`;
   $("cMore").classList.toggle("hide",arr.length<=cShown);
 }
 $("cList").onclick=e=>{const r=e.target.closest("[data-cid]");if(r)showCust(r.dataset.cid)};
 let kRows=[],kSel=new Set(),kTab="buys";
-function kSetTab(t){kTab=t;document.querySelectorAll("[data-kt]").forEach(b=>b.classList.toggle("on",b.dataset.kt===t));$("kBuysBox").classList.toggle("hide",t!=="buys");$("kInfoBox").classList.toggle("hide",t!=="info")}
+function kSetTab(t){kTab=t;document.querySelectorAll("[data-kt]").forEach(b=>b.classList.toggle("on",b.dataset.kt===t));$("kBuysBox").classList.toggle("hide",t!=="buys");$("kInfoBox").classList.toggle("hide",t!=="info");$("kBalBox").classList.toggle("hide",t!=="bal");if(t==="bal")kLoadBal()}
 document.querySelectorAll("[data-kt]").forEach(b=>b.onclick=()=>kSetTab(b.dataset.kt));
 const dtk=d=>{const x=String(d).slice(0,10).split("-");return `${+x[2]}.${x[1]}.${x[0]}`};
 async function showCust(id,itemId){
@@ -1191,6 +1215,68 @@ async function kDetail(itemId){
     <div class="two" style="margin-top:12px"><button class="btn sec" id="kTog" data-id="${esc(itemId)}" style="margin:0">${kSel.has(itemId)?"✓ Seçildi":"➕ Siparişe seç"}</button><button class="btn sec" id="kWho" data-id="${esc(itemId)}" style="margin:0">👥 Kimler aldı?</button></div>`;
   kAct();
 }
+const KLBL={acilis:"Wolvox bakiyesi",satis:"Satış",tahsilat:"Tahsilat",borc:"Borç",alacak:"Alacak"};
+async function kLoadBal(){
+  const c=curCust;if(!c)return;$("kMoves").innerHTML=`<div class="small">Yükleniyor…</div>`;
+  const [{data,error},{data:bl}]=await Promise.all([sb.from("cari_moves").select("id,kind,amount,note,created_at,created_by,doc_id").eq("customer_id",c.id).order("created_at",{ascending:false}).limit(200),sb.rpc("cari_balances")]);
+  if(curCust!==c)return;if(error){$("kMoves").innerHTML=esc(errTr(error.message));return}
+  bals={};(bl||[]).forEach(x=>bals[x.customer_id]=x);
+  const b=bals[c.id],v=b?Number(b.bakiye):0,ac=b&&b.acilis_at?new Date(b.acilis_at).getTime():0;
+  $("kBal").textContent=tl(Math.abs(v))||"₺0,00";$("kBal").style.color=v>0?"var(--red)":v<0?"var(--grn)":"";
+  $("kBalT").textContent=v>0?"Cari bize borçlu":v<0?"Biz cariye borçluyuz":"Bakiye yok";
+  const ms=data||[];
+  $("kMoves").innerHTML=ms.length?ms.map(m=>{const t=new Date(m.created_at).getTime(),old=m.kind!=="acilis"&&ac&&t<=ac,a=Number(m.amount);
+    return `<div class="cm${old?" old":""}"><div><div>${esc(KLBL[m.kind]||m.kind)}${m.note&&m.note!==KLBL[m.kind]?" · "+esc(m.note):""}</div><div class="d">${dtk(m.created_at)} ${new Date(m.created_at).toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"})}${pname(m.created_by)?" · "+esc(pname(m.created_by)):""}</div></div>
+    <div style="text-align:right"><b class="${a>0?"p":"m"}">${a>0?"+":"−"}${tl(Math.abs(a))}</b>${["tahsilat","borc","alacak"].includes(m.kind)?`<div><button class="chip" data-cmdel="${m.id}" style="padding:2px 9px;font-size:12px;margin-top:3px">Sil</button></div>`:""}</div></div>`}).join(""):`<div class="empty">Henüz hareket yok.</div>`;
+}
+async function kAddMove(kind){
+  const c=curCust;if(!c)return;const v=numOrNull($("kAmt").value);if(!v||v<=0)return toast("Tutar gir");
+  const btns=[$("kTah"),$("kBor")];btns.forEach(b=>b.disabled=true);
+  const {error}=await sb.from("cari_moves").insert({customer_id:c.id,kind,amount:kind==="tahsilat"?-v:v,note:$("kAmtN").value.trim()||null});
+  btns.forEach(b=>b.disabled=false);if(error)return toast("Kaydedilemedi: "+errTr(error.message));
+  $("kAmt").value="";$("kAmtN").value="";toast(kind==="tahsilat"?"Tahsilat işlendi":"Borç eklendi");kLoadBal();
+}
+$("kTah").onclick=()=>kAddMove("tahsilat");$("kBor").onclick=()=>kAddMove("borc");
+$("kMoves").onclick=async e=>{const b=e.target.closest("[data-cmdel]");if(!b)return;
+  if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="Emin misin?";setTimeout(()=>{b.dataset.sure="";b.textContent="Sil"},3500);return}
+  const {error}=await sb.from("cari_moves").delete().eq("id",b.dataset.cmdel);if(error)return toast("Silinemedi: "+errTr(error.message));toast("Silindi");kLoadBal()};
+$("bFile").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;if(typeof XLSX==="undefined")return toast("Excel okuyucu yüklenemedi");
+  const out=$("bImp");out.textContent="Dosya okunuyor…";
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+    if(!rows.length){out.textContent="Dosyada satır yok.";return}
+    const r0=rows[0],col=k=>findCol(r0,k);
+    const cName=col(["ticari unvan","unvan","cari ad","firma ad"]),cCode=col(["cari kod","cari no","hesap kod"]),cBal=Object.keys(r0).find(k=>norm(k).trim()==="bakiye")||col(["bakiye"]),
+      cBA=Object.keys(r0).find(k=>["b/a/s","b/a","durum","bakiye tipi"].includes(norm(k).trim())),cTax=col(["vergi no","vkn"]),cTc=col(["tc kimlik","t.c. kimlik","kimlik no"]),
+      cBor=col(["toplam borc"]),cAla=col(["toplam alacak"]);
+    if(!cName||(!cBal&&!(cBor&&cAla))){out.textContent="Cari adı / Bakiye sütunu bulunamadı. Başlıklar: "+Object.keys(r0).join(", ");return}
+    const num=x=>{if(typeof x==="number")return x;let t=String(x).replace(/[^0-9,.\-]/g,"");if(t.includes(","))t=t.replace(/\./g,"").replace(",",".");const n=parseFloat(t);return isFinite(n)?n:0};
+    await Promise.all([loadCustomers(),loadCinfo()]);
+    const byCode=new Map(customers.filter(c=>c.code).map(c=>[c.code,c])),byName=new Map(customers.map(c=>[norm(c.name).trim(),c]));
+    const taxCnt={};Object.values(cinfo).forEach(i=>{if(i.tax_no)taxCnt[i.tax_no]=(taxCnt[i.tax_no]||[]).concat(i.customer_id)});
+    const recs=[],miss=[];
+    for(const r of rows){const name=String(r[cName]).trim();if(!name)continue;
+      if(cBal&&String(r[cBal]).trim()==="")continue;
+      let amt;if(cBal){amt=num(r[cBal]);const ba=cBA?norm(String(r[cBA])):"";if(/^a/.test(ba))amt=-Math.abs(amt);else if(/^b/.test(ba))amt=Math.abs(amt);else if(/\(a\)|\ba$/i.test(String(r[cBal])))amt=-Math.abs(amt)}
+      else amt=num(r[cBor])-num(r[cAla]);
+      amt=Math.round(amt*100)/100;
+      const code=cCode?String(r[cCode]).trim():"",tax=String((cTax&&r[cTax])||(cTc&&r[cTc])||"").trim();
+      let cu=(code&&byCode.get(code))||byName.get(norm(name).trim());
+      if(!cu&&tax&&taxCnt[tax]&&taxCnt[tax].length===1)cu=customers.find(c=>c.id===taxCnt[tax][0]);
+      if(cu)recs.push({customer_id:cu.id,amount:amt});else miss.push({name:name.slice(0,120),code:code||null,tax,amount:amt})}
+    if(miss.length){const {data,error}=await sb.from("customers").insert(miss.map(m=>({name:m.name,code:m.code}))).select("id");if(error)throw error;
+      data.forEach((d,k)=>recs.push({customer_id:d.id,amount:miss[k].amount}));
+      const inf=data.map((d,k)=>({customer_id:d.id,tax_no:miss[k].tax||null,updated_at:new Date().toISOString()})).filter(x=>x.tax_no);if(inf.length)await sb.from("customer_info").upsert(inf)}
+    const seen=new Set(),uniq=recs.filter(r=>!seen.has(r.customer_id)&&seen.add(r.customer_id));
+    const {data:n,error}=await sb.rpc("set_openings",{p_rows:uniq});if(error)throw error;
+    const tot=uniq.reduce((a,r)=>a+r.amount,0);
+    out.textContent=`✅ ${n} carinin bakiyesi yüklendi${miss.length?` (${miss.length} yeni cari açıldı)`:""}\nToplam: ${tl(tot)}`;
+    await Promise.all([loadCustomers(),loadBals()]);renderCari();
+  }catch(x){out.textContent+="\n❌ Hata: "+errTr(x.message||String(x))}
+  e.target.value="";
+};
 async function kMake(kind){
   const c=curCust;if(!c||!kSel.size)return;
   const lines=[];kRows.filter(r=>kSel.has(r.item_id)).forEach(r=>{const it=items.find(i=>i.id===r.item_id)||{};
@@ -1568,7 +1654,7 @@ $("pano").onclick=e=>{const b=e.target.closest("[data-pk2]");if(!b)return;const 
 /* ---------- Bildirimler (web push) ---------- */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 /* yeni sürüm gelince kendini yenile */
-const APP_VER="2026-11-25-2";
+const APP_VER="2026-11-25-3";
 async function verCheck(){try{const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"});const t=await r.text();const m=t.match(/const APP_VER="([^"]+)"/);
   if(m&&m[1]!==APP_VER&&!document.querySelector(".sheet.show input:focus")){toast("Yeni sürüm yükleniyor…");setTimeout(()=>location.reload(),800)}}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verCheck()});setInterval(verCheck,5*60*1000);
