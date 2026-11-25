@@ -1567,6 +1567,11 @@ $("pano").onclick=e=>{const b=e.target.closest("[data-pk2]");if(!b)return;const 
 
 /* ---------- Bildirimler (web push) ---------- */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* yeni sürüm gelince kendini yenile */
+const APP_VER="2026-11-25-2";
+async function verCheck(){try{const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"});const t=await r.text();const m=t.match(/const APP_VER="([^"]+)"/);
+  if(m&&m[1]!==APP_VER&&!document.querySelector(".sheet.show input:focus")){toast("Yeni sürüm yükleniyor…");setTimeout(()=>location.reload(),800)}}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verCheck()});setInterval(verCheck,5*60*1000);
 const u8key=b=>{b=b.replace(/-/g,"+").replace(/_/g,"/");while(b.length%4)b+="=";const r=atob(b);return Uint8Array.from(r,c=>c.charCodeAt(0))};
 async function pushSub(){if(!("serviceWorker" in navigator)||!("PushManager" in window))return null;const reg=await navigator.serviceWorker.getRegistration();return reg?reg.pushManager.getSubscription():null}
 async function notifLabel(){try{const s=await pushSub();$("notifBtn").textContent=s&&Notification.permission==="granted"?"🔔 Bildirim açık · test gönder":"🔔 Akşam özet bildirimini aç"}catch(e){}}
