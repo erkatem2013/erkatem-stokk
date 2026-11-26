@@ -433,7 +433,7 @@ html.dark .bdg.taslak{background:#333;color:#ddd}
     <button class="mt hide" id="cntBtn"><span>📋</span>Sayım modu</button>
   </div>
   <div class="mlist">
-    <button class="ml hide" id="notifBtn">🔔 Akşam özet bildirimini aç</button>
+    <button class="ml hide" id="notifBtn">🔔 Bildirimleri aç</button>
     <button class="ml" id="copyBtn">📋 Kritik stok listesini kopyala</button>
     <button class="ml" id="reloadBtn">🔄 Listeyi yenile</button>
     <button class="ml" id="darkBtn">🌙 Karanlık mod: Kapalı</button>
@@ -602,7 +602,7 @@ const EMAIL_DOMAIN="erkatem.com";
 const $=id=>document.getElementById(id);
 let sortMode="pop";try{sortMode=localStorage.getItem("erkatem_sort")||"pop"}catch(e){}
 const ROLES={patron:"Patron",yonetici:"Yönetici",depocu:"Depocu",satis:"Satış",izleyici:"İzleyici",bekliyor:"Bekliyor"};
-const PERM={sum:["patron","yonetici"],fixmove:["patron"],seeprice:["patron","yonetici","satis"],docs:["patron","yonetici"],pick:["patron","yonetici","depocu"],cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
+const PERM={sum:["patron","yonetici"],notif:["patron","yonetici","depocu"],fixmove:["patron"],seeprice:["patron","yonetici","satis"],docs:["patron","yonetici"],pick:["patron","yonetici","depocu"],cari:["patron","yonetici"],manage:["patron","yonetici"],price:["patron","yonetici"],add:["patron","yonetici","depocu"],imp:["patron","yonetici"],in:["patron","yonetici","depocu"],out:["patron","yonetici","depocu","satis"],count:["patron","yonetici","depocu"],team:["patron"],people:["patron","yonetici"]};
 let costs={};let costMeta={};let customers=[];let sb=null,me=null,items=[],people={},filter="all",cur=null,editing=null,busy=false,authMode="in";
 const can=a=>!!me&&PERM[a].includes(me.role);
 const tl=n=>(n===null||n===undefined||n==="")?"":"₺"+Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -678,7 +678,7 @@ async function boot(){
   $("movesBtn").classList.toggle("hide",!can("fixmove"));
   $("cntBtn").classList.toggle("hide",!can("count"));
   $("sumBtn").classList.toggle("hide",!can("sum"));
-  $("notifBtn").classList.toggle("hide",!can("sum"));if(can("sum"))notifLabel();
+  $("notifBtn").classList.toggle("hide",!can("notif"));if(can("notif"))notifLabel();
   document.querySelector('[data-tab="docs"]').classList.toggle("hide",!can("docs"));
   document.querySelector('[data-tab="pick"]').classList.toggle("hide",!can("pick"));
   document.querySelector('[data-tab="sum"]').classList.toggle("hide",!can("sum"));
@@ -686,6 +686,7 @@ async function boot(){
   await loadItems();
   loadPano();
   if(can("sum")&&new URLSearchParams(location.search).get("sum")){history.replaceState(null,"",location.pathname);$("sumBtn").click()}
+  if(can("pick")&&new URLSearchParams(location.search).get("pick")){history.replaceState(null,"",location.pathname);$("pickBtn").click()}
   loadCustomers();
   if(can("people"))loadPeople();
 }
@@ -1654,13 +1655,13 @@ $("pano").onclick=e=>{const b=e.target.closest("[data-pk2]");if(!b)return;const 
 /* ---------- Bildirimler (web push) ---------- */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 /* yeni sürüm gelince kendini yenile */
-const APP_VER="2026-11-25-3";
+const APP_VER="2026-11-26-1";
 async function verCheck(){try{const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"});const t=await r.text();const m=t.match(/const APP_VER="([^"]+)"/);
   if(m&&m[1]!==APP_VER&&!document.querySelector(".sheet.show input:focus")){toast("Yeni sürüm yükleniyor…");setTimeout(()=>location.reload(),800)}}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verCheck()});setInterval(verCheck,5*60*1000);
 const u8key=b=>{b=b.replace(/-/g,"+").replace(/_/g,"/");while(b.length%4)b+="=";const r=atob(b);return Uint8Array.from(r,c=>c.charCodeAt(0))};
 async function pushSub(){if(!("serviceWorker" in navigator)||!("PushManager" in window))return null;const reg=await navigator.serviceWorker.getRegistration();return reg?reg.pushManager.getSubscription():null}
-async function notifLabel(){try{const s=await pushSub();$("notifBtn").textContent=s&&Notification.permission==="granted"?"🔔 Bildirim açık · test gönder":"🔔 Akşam özet bildirimini aç"}catch(e){}}
+async function notifLabel(){try{const s=await pushSub();$("notifBtn").textContent=s&&Notification.permission==="granted"?"🔔 Bildirim açık · test gönder":"🔔 Bildirimleri aç"}catch(e){}}
 $("notifBtn").onclick=async()=>{
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),standalone=navigator.standalone||matchMedia("(display-mode: standalone)").matches;
   if(!("Notification" in window)||!("PushManager" in window)||!("serviceWorker" in navigator)){toast(ios&&!standalone?"Önce siteyi ana ekrana ekle, sonra ikondan açıp tekrar dene":"Bu telefon bildirimi desteklemiyor");return}
